@@ -1,0 +1,28 @@
+package com.example.eyeSeeYou
+
+import android.opengl.GLSurfaceView
+import android.view.View
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import com.example.eyeSeeYou.helpers.SnackbarHelper
+import com.example.eyeSeeYou.helpers.TapHelper
+
+/** Contains UI elements for Hello AR. */
+class MainView(val activity: MainActivity) : DefaultLifecycleObserver {
+    val root = View.inflate(activity, R.layout.activity_main, null)
+    val surfaceView = root.findViewById<GLSurfaceView>(R.id.surfaceview)
+
+    val session
+        get() = activity.arCoreSessionHelper.session
+
+    val snackbarHelper = SnackbarHelper()
+    val tapHelper = TapHelper(activity).also { surfaceView.setOnTouchListener(it) }
+
+    override fun onResume(owner: LifecycleOwner) {
+        surfaceView.onResume()
+    }
+
+    override fun onPause(owner: LifecycleOwner) {
+        surfaceView.onPause()
+    }
+}
