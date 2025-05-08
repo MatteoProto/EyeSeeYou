@@ -24,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
     lateinit var view: MainView
     lateinit var renderer: MainRenderer
+    lateinit var processor: MainProcessor
 
     val depthSettings = DepthSettings()
     val eisSettings = EisSettings()
@@ -59,7 +60,8 @@ class MainActivity : AppCompatActivity() {
         lifecycle.addObserver(arCoreSessionHelper)
 
         // Set up the Hello AR renderer.
-        renderer = MainRenderer(this)
+        processor = MainProcessor()
+        renderer = MainRenderer(this, processor)
         lifecycle.addObserver(renderer)
 
         // Set up Hello AR UI.

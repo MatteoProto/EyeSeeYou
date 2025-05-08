@@ -1,5 +1,6 @@
 package com.example.eyeSeeYou
 
+import android.media.Image
 import android.opengl.GLES30
 import android.opengl.Matrix
 import android.util.Log
@@ -20,14 +21,16 @@ import com.example.eyeSeeYou.samplerender.VertexBuffer
 import com.example.eyeSeeYou.samplerender.arcore.BackgroundRenderer
 import com.example.eyeSeeYou.samplerender.arcore.PlaneRenderer
 import com.example.eyeSeeYou.samplerender.arcore.SpecularCubemapFilter
+import com.google.ar.core.Camera
+import com.google.ar.core.Frame
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.NotYetAvailableException
 import java.io.IOException
 import java.nio.ByteBuffer
 
-/** Renders the HelloAR application using our example Renderer. */
-class MainRenderer(val activity: MainActivity) :
+/** Renders the HelloAR application using google example Renderer. */
+class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
     SampleRender.Renderer, DefaultLifecycleObserver {
     companion object {
         val TAG = "HelloArRenderer"
@@ -50,13 +53,14 @@ class MainRenderer(val activity: MainActivity) :
         val CUBEMAP_NUMBER_OF_IMPORTANCE_SAMPLES = 32
     }
 
-    private var showSemanticImage = false
-
     lateinit var render: SampleRender
     lateinit var planeRenderer: PlaneRenderer
     lateinit var backgroundRenderer: BackgroundRenderer
     lateinit var virtualSceneFramebuffer: Framebuffer
-    var hasSetTextureNames = false
+
+    private var active =true
+    private var showSemanticImage = false
+    private var hasSetTextureNames = false
 
     // Point Cloud
     lateinit var pointCloudVertexBuffer: VertexBuffer
@@ -166,26 +170,10 @@ class MainRenderer(val activity: MainActivity) :
         virtualSceneFramebuffer.resize(width, height)
     }
 
+    /** Gruppo di funzioni eseguite a ogni frame */
     override fun onDrawFrame(render: SampleRender) {
         val session = session ?: return
-
-        // Texture names should only be set once on a GL thread unless they change. This is done during
-        // onDrawFrame rather than onSurfaceCreated since the session is not guaranteed to have been
-        // initialized during the execution of onSurfaceCreated.
-        if (!hasSetTextureNames) {
-            session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
-            hasSetTextureNames = true
-        }
-
-        // -- Update per-frame state
-
-        // Notify ARCore session that the view size changed so that the perspective matrix and
-        // the video background can be properly adjusted.
-        displayRotationHelper.updateSessionIfNeeded(session)
-
-        // Obtain the current frame from ARSession. When the configuration is set to
-        // UpdateMode.BLOCKING (it is by default), this will throttle the rendering to the
-        // camera framerate.
+        this.render = render
         val frame =
             try {
                 session.update()
@@ -194,64 +182,16 @@ class MainRenderer(val activity: MainActivity) :
                 showError("Camera not available. Try restarting the app.")
                 return
             }
+        if (!hasSetTextureNames) {
+            session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
+            hasSetTextureNames = true
+        }
+
+        displayRotationHelper.updateSessionIfNeeded(session)
 
         val camera = frame.camera
 
-        try {
-            backgroundRenderer.setUseDepthVisualization(
-                render,
-                activity.depthSettings.depthColorVisualizationEnabled()
-            )
-            backgroundRenderer.setUseOcclusion(render, activity.depthSettings.useDepthForOcclusion())
-        } catch (e: IOException) {
-            Log.e(TAG, "Failed to read a required asset file", e)
-            showError("Failed to read a required asset file: $e")
-            return
-        }
-
-        // BackgroundRenderer.updateDisplayGeometry must be called every frame to update the coordinates
-        // used to draw the background camera image.
-        backgroundRenderer.updateDisplayGeometry(frame)
-        val shouldGetDepthImage =
-            activity.depthSettings.useDepthForOcclusion() ||
-                    activity.depthSettings.depthColorVisualizationEnabled()
-
-
-        // Dentro camera.trackingState == TRACKING
-        if (camera.trackingState == TrackingState.TRACKING) {
-            try {
-
-                if (showSemanticImage) {
-                    val semanticImage = frame.acquireSemanticImage()
-                    semanticImage.use { semanticImage ->
-                        backgroundRenderer.setUseDepthVisualization(render, false)
-                        backgroundRenderer.updateCameraSemanticTexture(semanticImage)
-                        semanticImage.close()
-                    }
-                } else {
-                   val depthImage = frame.acquireDepthImage16Bits()
-                   depthImage.use { depthImage ->
-                       backgroundRenderer.setUseDepthVisualization(render, true)
-                       backgroundRenderer.updateCameraDepthTexture(depthImage)
-                       depthImage.close()
-                   }
-                }
-            } catch (e: NotYetAvailableException) {
-                // Le immagini non sono ancora pronte: normale
-            }
-        }
-
-        // Check for taps to toggle between depth and semantic images
-        activity.view.tapHelper.poll()?.let {
-            handleTap()
-        }
-
-        // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
-        trackingStateHelper.updateKeepScreenOnFlag(camera.trackingState)
-
-        // Show a message based on whether tracking has failed, if planes are detected, and if the user
-        // has placed any objects.
-
+        // Comunicazione degli errori e gestione della torcia
         val message: String? =
             when {
                 camera.trackingState == TrackingState.PAUSED &&
@@ -273,6 +213,91 @@ class MainRenderer(val activity: MainActivity) :
             activity.view.snackbarHelper.showMessage(activity, message)
         }
 
+        var semantic:Image? = null
+        var depth:Image? = null
+
+        //Gestisce i tocchi
+        activity.view.tapHelper.poll()?.let {
+            handleTap()
+        }
+
+        //Decide se e cosa mostrare a schermo
+       if (active){
+            if (showSemanticImage){
+                semantic = drawRendering(render,session,camera,frame)
+            } else {
+                depth = drawRendering(render,session,camera,frame)
+            }
+       } else {
+            trackingStateHelper.updateKeepScreenOnFlag(TrackingState.PAUSED)
+            return
+        }
+
+        //Avvia le funzioni di analisi di frame e processing dei dati
+       processor.processFrame(frame,semantic,depth)
+
+        semantic?.close()
+        depth?.close()
+    }
+
+    /** Funzione che si occupa della creazione dell'immagine da renderizzare a schermo */
+    private fun drawRendering(render: SampleRender,session: Session, camera: Camera, frame: Frame): Image?{
+
+        var image:Image? = null
+
+
+
+        // -- Update per-frame state
+
+        // Notify ARCore session that the view size changed so that the perspective matrix and
+        // the video background can be properly adjusted.
+        if (!::render.isInitialized) {
+            Log.w("MainRenderer", "Render non inizializzato, frame ignorato")
+            return null
+        }
+
+        try {
+            backgroundRenderer.setUseDepthVisualization(
+                render,
+                activity.depthSettings.depthColorVisualizationEnabled()
+            )
+            backgroundRenderer.setUseOcclusion(render, activity.depthSettings.useDepthForOcclusion())
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to read a required asset file", e)
+            showError("Failed to read a required asset file: $e")
+            return null
+        }
+
+        // BackgroundRenderer.updateDisplayGeometry must be called every frame to update the coordinates
+        // used to draw the background camera image.
+        backgroundRenderer.updateDisplayGeometry(frame)
+
+        if (camera.trackingState == TrackingState.TRACKING) {
+            try {
+                if (showSemanticImage) {
+                    val semanticImage = frame.acquireSemanticImage()
+                    image = semanticImage
+                    semanticImage.use { semanticImage ->
+                        backgroundRenderer.setUseDepthVisualization(render, false)
+                        backgroundRenderer.updateCameraSemanticTexture(semanticImage)
+                        semanticImage.close()
+                    }
+                } else {
+                    val depthImage = frame.acquireDepthImage16Bits()
+                    image = depthImage
+                    depthImage.use { depthImage ->
+                        backgroundRenderer.setUseDepthVisualization(render, true)
+                        backgroundRenderer.updateCameraDepthTexture(depthImage)
+                        depthImage.close()
+                    }
+                }
+            } catch (e: NotYetAvailableException) {
+                // Le immagini non sono ancora pronte: normale
+            }
+        }
+
+        trackingStateHelper.updateKeepScreenOnFlag(camera.trackingState)
+
         // -- Draw background
         if (frame.timestamp != 0L) {
             // Suppress rendering if the camera did not produce the first frame yet. This is to avoid
@@ -282,7 +307,7 @@ class MainRenderer(val activity: MainActivity) :
 
         // If not tracking, don't draw 3D objects.
         if (camera.trackingState == TrackingState.PAUSED) {
-            return
+            return image
         }
 
         // -- Draw non-occluded virtual objects (planes, point cloud)
@@ -312,6 +337,8 @@ class MainRenderer(val activity: MainActivity) :
 
         // Compose the virtual scene with the background.
         backgroundRenderer.drawVirtualScene(render, virtualSceneFramebuffer, Z_NEAR, Z_FAR)
+
+        return image
     }
 
     /** Checks if we detected at least one plane. */
@@ -320,16 +347,11 @@ class MainRenderer(val activity: MainActivity) :
 
     /** Update state based on the current frame's light estimation. */
     fun handleTap() {
+        active = true
         showSemanticImage = !showSemanticImage
         Log.d("MainRenderer", "Tap detected: $showSemanticImage")
     }
 
-
     private fun showError(errorMessage: String) =
         activity.view.snackbarHelper.showError(activity, errorMessage)
     }
-
-/**
- * Associates an Anchor with the trackable it was attached to. This is used to be able to check
- * whether or not an Anchor originally was attached to an {@link InstantPlacementPoint}.
- */

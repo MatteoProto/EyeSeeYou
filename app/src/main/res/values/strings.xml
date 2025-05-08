@@ -25,15 +25,7 @@
   <string-array translatable="false" name="depth_options_array">
     <item>Enable depth</item>
     <item>Show depth map</item>
-    <!--
-    <item>Show Camera Background</item>
-    <item>Show User Collision State</item>
-    <item>Show Collision Points</item>
-    <item>Enable Vibration Warning</item>
-    <item>Enable Speech Warnings</item>
-    -->
   </string-array>
-
   <string translatable="false" name="searching_planes">Searching for surfaces...</string>
   <string translatable="false" name="waiting_taps">Tap on a surface to place an object.</string>
 
