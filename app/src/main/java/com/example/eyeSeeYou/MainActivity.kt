@@ -4,10 +4,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
-import com.google.ar.core.examples.java.common.helpers.ARCoreSessionLifecycleHelper
-import com.google.ar.core.exceptions.*
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.example.eyeSeeYou.helpers.CameraPermissionHelper
 import com.example.eyeSeeYou.helpers.DepthSettings
 import com.example.eyeSeeYou.helpers.EisSettings
@@ -15,6 +13,12 @@ import com.example.eyeSeeYou.helpers.FullScreenHelper
 import com.example.eyeSeeYou.samplerender.SampleRender
 import com.google.ar.core.Config
 import com.google.ar.core.Session
+import com.google.ar.core.examples.java.common.helpers.ARCoreSessionLifecycleHelper
+import com.google.ar.core.exceptions.CameraNotAvailableException
+import com.google.ar.core.exceptions.UnavailableApkTooOldException
+import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
+import com.google.ar.core.exceptions.UnavailableSdkTooOldException
+import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -23,11 +27,11 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
     lateinit var view: MainView
-    lateinit var renderer: MainRenderer
-    lateinit var processor: MainProcessor
+    private lateinit var renderer: MainRenderer
+    private lateinit var processor: MainProcessor
 
     val depthSettings = DepthSettings()
-    val eisSettings = EisSettings()
+    private val eisSettings = EisSettings()
 
     private var torch = false
     private var torchTimer: Handler? = null
@@ -36,7 +40,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Inizializzazione della sessione
+        // Session initialization
         arCoreSessionHelper = ARCoreSessionLifecycleHelper(this)
         arCoreSessionHelper.exceptionCallback =
             { exception ->
@@ -55,7 +59,7 @@ class MainActivity : AppCompatActivity() {
                 view.snackbarHelper.showError(this, message)
             }
 
-        // Configurazione sessione
+        // Session configuration and settings
         arCoreSessionHelper.beforeSessionResume = ::configureSession
         //arCoreSessionHelper.beforeSessionResume = ::configureCamera
         lifecycle.addObserver(arCoreSessionHelper)
@@ -114,7 +118,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    fun configureTorch(session: Session) {
+    private fun configureTorch(session: Session) {
         session.configure(session.config.apply {
             flashMode = if (torch) {
                 Config.FlashMode.TORCH
@@ -126,7 +130,6 @@ class MainActivity : AppCompatActivity() {
 
     fun setTorch(torchEnabled: Boolean, session: Session) {
         if (torch == torchEnabled && torchEnabled) {
-            // Stato già uguale (acceso) → solo reset timer
             torchTimer?.removeCallbacksAndMessages(null)
             torchTimer = Handler(Looper.getMainLooper())
             torchTimer?.postDelayed({
@@ -136,11 +139,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Cambia stato torcia
         torch = torchEnabled
         configureTorch(session)
 
-        // Se accendiamo la torcia, parte il timer
         if (torchEnabled) {
             torchTimer?.removeCallbacksAndMessages(null)
             torchTimer = Handler(Looper.getMainLooper())
@@ -157,11 +158,11 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
-        results: IntArray
+        grantResults: IntArray
     ) {
-        super.onRequestPermissionsResult(requestCode, permissions, results)
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (!CameraPermissionHelper.hasCameraPermission(this)) {
-            // Use toast instead of snackbar here since the activity will exit.
+            // Use toast instead of snack bar here since the activity will exit.
             Toast.makeText(
                 this,
                 "Camera permission is needed to run this application",

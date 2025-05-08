@@ -16,11 +16,10 @@ class MainProcessor {
             semantic.close()
             depth.close()
         } catch (e: NotYetAvailableException) {
-            // Le immagini non sono ancora pronte: normale
+            // Images still not ready
         }
     }
 
     private fun findObstacles(image: Image) {
-        // algoritmo obstacle detection
     }
 }

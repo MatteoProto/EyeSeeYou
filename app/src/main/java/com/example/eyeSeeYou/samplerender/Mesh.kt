@@ -13,184 +13,182 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.eyeSeeYou.samplerender;
+package com.example.eyeSeeYou.samplerender
 
-import android.opengl.GLES30;
-import android.util.Log;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-
-import de.javagl.obj.Obj;
-import de.javagl.obj.ObjData;
-import de.javagl.obj.ObjReader;
-import de.javagl.obj.ObjUtils;
+import android.opengl.GLES30
+import android.util.Log
+import com.example.eyeSeeYou.samplerender.GLError.maybeLogGLError
+import com.example.eyeSeeYou.samplerender.GLError.maybeThrowGLException
+import com.example.eyeSeeYou.samplerender.IndexBuffer
+import com.example.eyeSeeYou.samplerender.VertexBuffer
+import de.javagl.obj.ObjData
+import de.javagl.obj.ObjReader
+import de.javagl.obj.ObjUtils
+import java.io.Closeable
+import java.io.IOException
 
 /**
  * A collection of vertices, faces, and other attributes that define how to render a 3D object.
  *
- * <p>To render the mesh, use {/@link SampleRender#draw()}.
+ *
+ * To render the mesh, use {/@link SampleRender#draw()}.
  */
-public class Mesh implements Closeable {
-  private static final String TAG = Mesh.class.getSimpleName();
-
-  /**
-   * The kind of primitive to render.
-   *
-   * <p>This determines how the data in {@link VertexBuffer}s are interpreted. See <a
-   * href="https://www.khronos.org/opengl/wiki/Primitive">here</a> for more on how primitives
-   * behave.
-   */
-  public enum PrimitiveMode {
-    POINTS(GLES30.GL_POINTS),
-    LINE_STRIP(GLES30.GL_LINE_STRIP),
-    LINE_LOOP(GLES30.GL_LINE_LOOP),
-    LINES(GLES30.GL_LINES),
-    TRIANGLE_STRIP(GLES30.GL_TRIANGLE_STRIP),
-    TRIANGLE_FAN(GLES30.GL_TRIANGLE_FAN),
-    TRIANGLES(GLES30.GL_TRIANGLES);
-
-    /* package-private */
-    final int glesEnum;
-
-    private PrimitiveMode(int glesEnum) {
-      this.glesEnum = glesEnum;
-    }
-  }
-
-  private final int[] vertexArrayId = {0};
-  private final PrimitiveMode primitiveMode;
-  private final IndexBuffer indexBuffer;
-  private final VertexBuffer[] vertexBuffers;
-
-  /**
-   * Construct a {@link Mesh}.
-   *
-   * <p>The data in the given {@link IndexBuffer} and {@link VertexBuffer}s does not need to be
-   * finalized; they may be freely changed throughout the lifetime of a {@link Mesh} using their
-   * respective {@code set()} methods.
-   *
-   * <p>The ordering of the {@code vertexBuffers} is significant. Their array indices will
-   * correspond to their attribute locations, which must be taken into account in shader code. The
-   * <a href="https://www.khronos.org/opengl/wiki/Layout_Qualifier_(GLSL)">layout qualifier</a> must
-   * be used in the vertex shader code to explicitly associate attributes with these indices.
-   */
-  public Mesh(
-      SampleRender render,
-      PrimitiveMode primitiveMode,
-      IndexBuffer indexBuffer,
-      VertexBuffer[] vertexBuffers) {
-    if (vertexBuffers == null || vertexBuffers.length == 0) {
-      throw new IllegalArgumentException("Must pass at least one vertex buffer");
+class Mesh(
+    render: SampleRender?,
+    primitiveMode: PrimitiveMode,
+    indexBuffer: IndexBuffer?,
+    vertexBuffers: Array<VertexBuffer>
+) : Closeable {
+    /**
+     * The kind of primitive to render.
+     *
+     *
+     * This determines how the data in [VertexBuffer]s are interpreted. See [here](https://www.khronos.org/opengl/wiki/Primitive) for more on how primitives
+     * behave.
+     */
+    enum class PrimitiveMode(/* package-private */val glesEnum: Int) {
+        POINTS(GLES30.GL_POINTS),
+        LINE_STRIP(GLES30.GL_LINE_STRIP),
+        LINE_LOOP(GLES30.GL_LINE_LOOP),
+        LINES(GLES30.GL_LINES),
+        TRIANGLE_STRIP(GLES30.GL_TRIANGLE_STRIP),
+        TRIANGLE_FAN(GLES30.GL_TRIANGLE_FAN),
+        TRIANGLES(GLES30.GL_TRIANGLES)
     }
 
-    this.primitiveMode = primitiveMode;
-    this.indexBuffer = indexBuffer;
-    this.vertexBuffers = vertexBuffers;
+    private val vertexArrayId = intArrayOf(0)
+    private val primitiveMode: PrimitiveMode
+    private val indexBuffer: IndexBuffer?
+    private val vertexBuffers: Array<VertexBuffer>
 
-    try {
-      // Create vertex array
-      GLES30.glGenVertexArrays(1, vertexArrayId, 0);
-      GLError.maybeThrowGLException("Failed to generate a vertex array", "glGenVertexArrays");
+    /**
+     * Construct a [Mesh].
+     *
+     *
+     * The data in the given [IndexBuffer] and [VertexBuffer]s does not need to be
+     * finalized; they may be freely changed throughout the lifetime of a [Mesh] using their
+     * respective `set()` methods.
+     *
+     *
+     * The ordering of the `vertexBuffers` is significant. Their array indices will
+     * correspond to their attribute locations, which must be taken into account in shader code. The
+     * [layout qualifier](https://www.khronos.org/opengl/wiki/Layout_Qualifier_(GLSL)) must
+     * be used in the vertex shader code to explicitly associate attributes with these indices.
+     */
+    init {
+        require(!(vertexBuffers == null || vertexBuffers.size == 0)) { "Must pass at least one vertex buffer" }
 
-      // Bind vertex array
-      GLES30.glBindVertexArray(vertexArrayId[0]);
-      GLError.maybeThrowGLException("Failed to bind vertex array object", "glBindVertexArray");
+        this.primitiveMode = primitiveMode
+        this.indexBuffer = indexBuffer
+        this.vertexBuffers = vertexBuffers
 
-      if (indexBuffer != null) {
-        GLES30.glBindBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER, indexBuffer.getBufferId());
-      }
+        try {
+            // Create vertex array
+            GLES30.glGenVertexArrays(1, vertexArrayId, 0)
+            maybeThrowGLException("Failed to generate a vertex array", "glGenVertexArrays")
 
-      for (int i = 0; i < vertexBuffers.length; ++i) {
-        // Bind each vertex buffer to vertex array
-        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, vertexBuffers[i].getBufferId());
-        GLError.maybeThrowGLException("Failed to bind vertex buffer", "glBindBuffer");
-        GLES30.glVertexAttribPointer(
-            i, vertexBuffers[i].getNumberOfEntriesPerVertex(), GLES30.GL_FLOAT, false, 0, 0);
-        GLError.maybeThrowGLException(
-            "Failed to associate vertex buffer with vertex array", "glVertexAttribPointer");
-        GLES30.glEnableVertexAttribArray(i);
-        GLError.maybeThrowGLException(
-            "Failed to enable vertex buffer", "glEnableVertexAttribArray");
-      }
-    } catch (Throwable t) {
-      close();
-      throw t;
-    }
-  }
+            // Bind vertex array
+            GLES30.glBindVertexArray(vertexArrayId[0])
+            maybeThrowGLException("Failed to bind vertex array object", "glBindVertexArray")
 
-  /**
-   * Constructs a {@link Mesh} from the given Wavefront OBJ file.
-   *
-   * <p>The {@link Mesh} will be constructed with three attributes, indexed in the order of local
-   * coordinates (location 0, vec3), texture coordinates (location 1, vec2), and vertex normals
-   * (location 2, vec3).
-   */
-  public static Mesh createFromAsset(SampleRender render, String assetFileName) throws IOException {
-    try (InputStream inputStream = render.getAssets().open(assetFileName)) {
-      Obj obj = ObjUtils.convertToRenderable(ObjReader.read(inputStream));
+            if (indexBuffer != null) {
+                GLES30.glBindBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER, indexBuffer.bufferId)
+            }
 
-      // Obtain the data from the OBJ, as direct buffers:
-      IntBuffer vertexIndices = ObjData.getFaceVertexIndices(obj, /*numVerticesPerFace=*/ 3);
-      FloatBuffer localCoordinates = ObjData.getVertices(obj);
-      FloatBuffer textureCoordinates = ObjData.getTexCoords(obj, /*dimensions=*/ 2);
-      FloatBuffer normals = ObjData.getNormals(obj);
-
-      VertexBuffer[] vertexBuffers = {
-        new VertexBuffer(render, 3, localCoordinates),
-        new VertexBuffer(render, 2, textureCoordinates),
-        new VertexBuffer(render, 3, normals),
-      };
-
-      IndexBuffer indexBuffer = new IndexBuffer(render, vertexIndices);
-
-      return new Mesh(render, PrimitiveMode.TRIANGLES, indexBuffer, vertexBuffers);
-    }
-  }
-
-  @Override
-  public void close() {
-    if (vertexArrayId[0] != 0) {
-      GLES30.glDeleteVertexArrays(1, vertexArrayId, 0);
-      GLError.maybeLogGLError(
-          Log.WARN, TAG, "Failed to free vertex array object", "glDeleteVertexArrays");
-    }
-  }
-
-  /**
-   * Draws the mesh. Don't call this directly unless you are doing low level OpenGL code; instead,
-   * prefer {@link SampleRender#draw}.
-   */
-  public void lowLevelDraw() {
-    if (vertexArrayId[0] == 0) {
-      throw new IllegalStateException("Tried to draw a freed Mesh");
-    }
-
-    GLES30.glBindVertexArray(vertexArrayId[0]);
-    GLError.maybeThrowGLException("Failed to bind vertex array object", "glBindVertexArray");
-    if (indexBuffer == null) {
-      // Sanity check for debugging
-      int vertexCount = vertexBuffers[0].getNumberOfVertices();
-      for (int i = 1; i < vertexBuffers.length; ++i) {
-        int iterCount = vertexBuffers[i].getNumberOfVertices();
-        if (iterCount != vertexCount) {
-          throw new IllegalStateException(
-              String.format(
-                  "Vertex buffers have mismatching numbers of vertices ([0] has %d but [%d] has"
-                      + " %d)",
-                  vertexCount, i, iterCount));
+            for (i in vertexBuffers.indices) {
+                // Bind each vertex buffer to vertex array
+                GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, vertexBuffers[i].bufferId)
+                maybeThrowGLException("Failed to bind vertex buffer", "glBindBuffer")
+                GLES30.glVertexAttribPointer(
+                    i, vertexBuffers[i].numberOfEntriesPerVertex, GLES30.GL_FLOAT, false, 0, 0
+                )
+                maybeThrowGLException(
+                    "Failed to associate vertex buffer with vertex array", "glVertexAttribPointer"
+                )
+                GLES30.glEnableVertexAttribArray(i)
+                maybeThrowGLException(
+                    "Failed to enable vertex buffer", "glEnableVertexAttribArray"
+                )
+            }
+        } catch (t: Throwable) {
+            close()
+            throw t
         }
-      }
-      GLES30.glDrawArrays(primitiveMode.glesEnum, 0, vertexCount);
-      GLError.maybeThrowGLException("Failed to draw vertex array object", "glDrawArrays");
-    } else {
-      GLES30.glDrawElements(
-          primitiveMode.glesEnum, indexBuffer.getSize(), GLES30.GL_UNSIGNED_INT, 0);
-      GLError.maybeThrowGLException(
-          "Failed to draw vertex array object with indices", "glDrawElements");
     }
-  }
+
+    override fun close() {
+        if (vertexArrayId[0] != 0) {
+            GLES30.glDeleteVertexArrays(1, vertexArrayId, 0)
+            maybeLogGLError(
+                Log.WARN, TAG, "Failed to free vertex array object", "glDeleteVertexArrays"
+            )
+        }
+    }
+
+    /**
+     * Draws the mesh. Don't call this directly unless you are doing low level OpenGL code; instead,
+     * prefer [SampleRender.draw].
+     */
+    fun lowLevelDraw() {
+        check(vertexArrayId[0] != 0) { "Tried to draw a freed Mesh" }
+
+        GLES30.glBindVertexArray(vertexArrayId[0])
+        maybeThrowGLException("Failed to bind vertex array object", "glBindVertexArray")
+        if (indexBuffer == null) {
+            // Sanity check for debugging
+            val vertexCount = vertexBuffers[0].numberOfVertices
+            for (i in 1..<vertexBuffers.size) {
+                val iterCount = vertexBuffers[i].numberOfVertices
+                check(iterCount == vertexCount) {
+                    String.format(
+                        "Vertex buffers have mismatching numbers of vertices ([0] has %d but [%d] has"
+                                + " %d)",
+                        vertexCount, i, iterCount
+                    )
+                }
+            }
+            GLES30.glDrawArrays(primitiveMode.glesEnum, 0, vertexCount)
+            maybeThrowGLException("Failed to draw vertex array object", "glDrawArrays")
+        } else {
+            GLES30.glDrawElements(
+                primitiveMode.glesEnum, indexBuffer.size, GLES30.GL_UNSIGNED_INT, 0
+            )
+            maybeThrowGLException(
+                "Failed to draw vertex array object with indices", "glDrawElements"
+            )
+        }
+    }
+
+    companion object {
+        private val TAG: String = Mesh::class.java.simpleName
+
+        /**
+         * Constructs a [Mesh] from the given Wavefront OBJ file.
+         *
+         *
+         * The [Mesh] will be constructed with three attributes, indexed in the order of local
+         * coordinates (location 0, vec3), texture coordinates (location 1, vec2), and vertex normals
+         * (location 2, vec3).
+         */
+        @Throws(IOException::class)
+        fun createFromAsset(render: SampleRender, assetFileName: String): Mesh {
+            render.assets.open(assetFileName).use { inputStream ->
+                val obj = ObjUtils.convertToRenderable(ObjReader.read(inputStream))
+                // Obtain the data from the OBJ, as direct buffers:
+                val vertexIndices = ObjData.getFaceVertexIndices(obj,  /*numVerticesPerFace=*/3)
+                val localCoordinates = ObjData.getVertices(obj)
+                val textureCoordinates = ObjData.getTexCoords(obj,  /*dimensions=*/2)
+                val normals = ObjData.getNormals(obj)
+
+                val vertexBuffers = arrayOf(
+                    VertexBuffer(render, 3, localCoordinates),
+                    VertexBuffer(render, 2, textureCoordinates),
+                    VertexBuffer(render, 3, normals),
+                )
+
+                val indexBuffer = IndexBuffer(render, vertexIndices)
+                return Mesh(render, PrimitiveMode.TRIANGLES, indexBuffer, vertexBuffers)
+            }
+        }
+    }
 }

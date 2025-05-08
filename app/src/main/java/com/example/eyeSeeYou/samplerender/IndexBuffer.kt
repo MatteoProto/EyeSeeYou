@@ -13,66 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.eyeSeeYou.samplerender;
+package com.example.eyeSeeYou.samplerender
 
-import android.opengl.GLES30;
-
-import java.io.Closeable;
-import java.nio.IntBuffer;
+import android.opengl.GLES30
+import java.io.Closeable
+import java.nio.IntBuffer
 
 /**
  * A list of vertex indices stored GPU-side.
  *
- * <p>When constructing a {@link Mesh}, an {@link IndexBuffer} may be passed to describe the
+ *
+ * When constructing a [Mesh], an [IndexBuffer] may be passed to describe the
  * ordering of vertices when drawing each primitive.
  *
- * @see <a
- *     href="https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glDrawElements.xhtml">glDrawElements</a>
+ * @see [glDrawElements](https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glDrawElements.xhtml)
  */
-public class IndexBuffer implements Closeable {
-  private final GpuBuffer buffer;
+class IndexBuffer(render: SampleRender?, entries: IntBuffer?) : Closeable {
+    private val buffer =
+        GpuBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER, GpuBuffer.INT_SIZE, entries)
 
-  /**
-   * Construct an {@link IndexBuffer} populated with initial data.
-   *
-   * <p>The GPU buffer will be filled with the data in the <i>direct</i> buffer {@code entries},
-   * starting from the beginning of the buffer (not the current cursor position). The cursor will be
-   * left in an undefined position after this function returns.
-   *
-   * <p>The {@code entries} buffer may be null, in which case an empty buffer is constructed
-   * instead.
-   */
-  public IndexBuffer(SampleRender render, IntBuffer entries) {
-    buffer = new GpuBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER, GpuBuffer.INT_SIZE, entries);
-  }
+    /**
+     * Populate with new data.
+     *
+     *
+     * The entire buffer is replaced by the contents of the *direct* buffer `entries`
+     * starting from the beginning of the buffer, not the current cursor position. The cursor will be
+     * left in an undefined position after this function returns.
+     *
+     *
+     * The GPU buffer is reallocated automatically if necessary.
+     *
+     *
+     * The `entries` buffer may be null, in which case the buffer will become empty.
+     */
+    fun set(entries: IntBuffer?) {
+        buffer.set(entries)
+    }
 
-  /**
-   * Populate with new data.
-   *
-   * <p>The entire buffer is replaced by the contents of the <i>direct</i> buffer {@code entries}
-   * starting from the beginning of the buffer, not the current cursor position. The cursor will be
-   * left in an undefined position after this function returns.
-   *
-   * <p>The GPU buffer is reallocated automatically if necessary.
-   *
-   * <p>The {@code entries} buffer may be null, in which case the buffer will become empty.
-   */
-  public void set(IntBuffer entries) {
-    buffer.set(entries);
-  }
+    override fun close() {
+        buffer.free()
+    }
 
-  @Override
-  public void close() {
-    buffer.free();
-  }
+    val bufferId: Int
+        /* package-private */
+        get() = buffer.getBufferId()
 
-  /* package-private */
-  int getBufferId() {
-    return buffer.getBufferId();
-  }
-
-  /* package-private */
-  int getSize() {
-    return buffer.getSize();
-  }
+    val size: Int
+        /* package-private */
+        get() = buffer.size
 }

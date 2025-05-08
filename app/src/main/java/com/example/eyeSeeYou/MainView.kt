@@ -9,11 +9,8 @@ import com.example.eyeSeeYou.helpers.TapHelper
 
 /** Contains UI elements for Hello AR. */
 class MainView(val activity: MainActivity) : DefaultLifecycleObserver {
-    val root = View.inflate(activity, R.layout.activity_main, null)
-    val surfaceView = root.findViewById<GLSurfaceView>(R.id.surfaceview)
-
-    val session
-        get() = activity.arCoreSessionHelper.session
+    val root: View = View.inflate(activity, R.layout.activity_main, null)
+    val surfaceView: GLSurfaceView = root.findViewById(R.id.surfaceview)
 
     val snackbarHelper = SnackbarHelper()
     val tapHelper = TapHelper(activity).also { surfaceView.setOnTouchListener(it) }

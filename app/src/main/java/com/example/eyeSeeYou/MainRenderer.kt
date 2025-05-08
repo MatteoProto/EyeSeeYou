@@ -6,9 +6,6 @@ import android.opengl.Matrix
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import com.google.ar.core.Plane
-import com.google.ar.core.Session
-import com.google.ar.core.TrackingState
 import com.example.eyeSeeYou.helpers.DisplayRotationHelper
 import com.example.eyeSeeYou.helpers.TrackingStateHelper
 import com.example.eyeSeeYou.samplerender.Framebuffer
@@ -20,72 +17,59 @@ import com.example.eyeSeeYou.samplerender.Texture
 import com.example.eyeSeeYou.samplerender.VertexBuffer
 import com.example.eyeSeeYou.samplerender.arcore.BackgroundRenderer
 import com.example.eyeSeeYou.samplerender.arcore.PlaneRenderer
-import com.example.eyeSeeYou.samplerender.arcore.SpecularCubemapFilter
 import com.google.ar.core.Camera
 import com.google.ar.core.Frame
+import com.google.ar.core.Plane
+import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
+import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.NotYetAvailableException
 import java.io.IOException
 import java.nio.ByteBuffer
 
 /** Renders the HelloAR application using google example Renderer. */
-class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
+class MainRenderer(val activity: MainActivity, private val processor: MainProcessor) :
     SampleRender.Renderer, DefaultLifecycleObserver {
     companion object {
-        val TAG = "HelloArRenderer"
+        const val TAG = "HelloArRenderer"
 
-        private val Z_NEAR = 0.1f
-        private val Z_FAR = 100f
-
-        // Assumed distance from the device camera to the surface on which user will try to place
-        // objects.
-        // This value affects the apparent scale of objects while the tracking method of the
-        // Instant Placement point is SCREENSPACE_WITH_APPROXIMATE_DISTANCE.
-        // Values in the [0.2, 2.0] meter range are a good choice for most AR experiences. Use lower
-        // values for AR experiences where users are expected to place objects on surfaces close to the
-        // camera. Use larger values for experiences where the user will likely be standing and trying
-        // to
-        // place an object on the ground or floor in front of them.
-        val APPROXIMATE_DISTANCE_METERS = 2.0f
-
-        val CUBEMAP_RESOLUTION = 16
-        val CUBEMAP_NUMBER_OF_IMPORTANCE_SAMPLES = 32
+        private const val Z_NEAR = 0.1f
+        private const val Z_FAR = 100f
     }
 
     lateinit var render: SampleRender
-    lateinit var planeRenderer: PlaneRenderer
-    lateinit var backgroundRenderer: BackgroundRenderer
-    lateinit var virtualSceneFramebuffer: Framebuffer
+    private lateinit var planeRenderer: PlaneRenderer
+    private lateinit var backgroundRenderer: BackgroundRenderer
+    private lateinit var virtualSceneFramebuffer: Framebuffer
 
     private var active = true
     private var showSemanticImage = false
     private var hasSetTextureNames = false
 
     // Point Cloud
-    lateinit var pointCloudVertexBuffer: VertexBuffer
-    lateinit var pointCloudMesh: Mesh
-    lateinit var pointCloudShader: Shader
+    private lateinit var pointCloudVertexBuffer: VertexBuffer
+    private lateinit var pointCloudMesh: Mesh
+    private lateinit var pointCloudShader: Shader
 
     // Keep track of the last point cloud rendered to avoid updating the VBO if point cloud
     // was not changed.  Do this using the timestamp since we can't compare PointCloud objects.
-    var lastPointCloudTimestamp: Long = 0
+    private var lastPointCloudTimestamp: Long = 0
 
     // Environmental HDR
-    lateinit var dfgTexture: Texture
-    lateinit var cubemapFilter: SpecularCubemapFilter
+    private lateinit var dfgTexture: Texture
 
     // Temporary matrix allocated here to reduce number of allocations for each frame.
-    val viewMatrix = FloatArray(16)
-    val projectionMatrix = FloatArray(16)
+    private val viewMatrix = FloatArray(16)
+    private val projectionMatrix = FloatArray(16)
 
-    val modelViewProjectionMatrix = FloatArray(16) // projection x view x model
+    private val modelViewProjectionMatrix = FloatArray(16) // projection x view x model
 
-    val session
+    private val session
         get() = activity.arCoreSessionHelper.session
 
-    val displayRotationHelper = DisplayRotationHelper(activity)
-    val trackingStateHelper = TrackingStateHelper(activity)
+    private val displayRotationHelper = DisplayRotationHelper(activity)
+    private val trackingStateHelper = TrackingStateHelper(activity)
 
 
     override fun onResume(owner: LifecycleOwner) {
@@ -105,12 +89,6 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
             backgroundRenderer = BackgroundRenderer(render)
             virtualSceneFramebuffer = Framebuffer(render, /*width=*/ 1, /*height=*/ 1)
 
-            cubemapFilter =
-                SpecularCubemapFilter(
-                    render,
-                    CUBEMAP_RESOLUTION,
-                    CUBEMAP_NUMBER_OF_IMPORTANCE_SAMPLES
-                )
             // Load environmental lighting values lookup table
             dfgTexture =
                 Texture(
@@ -129,7 +107,7 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
             activity.assets.open("models/dfg.raw").use { it.read(buffer.array()) }
 
             // SampleRender abstraction leaks here.
-            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, dfgTexture.textureId)
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, dfgTexture.getTextureId())
             GLError.maybeThrowGLException("Failed to bind DFG texture", "glBindTexture")
             GLES30.glTexImage2D(
                 GLES30.GL_TEXTURE_2D,
@@ -181,7 +159,7 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
         virtualSceneFramebuffer.resize(width, height)
     }
 
-    /** Gruppo di funzioni eseguite a ogni frame */
+    /** Group of functions executed for each frame. */
     override fun onDrawFrame(render: SampleRender) {
         val session = session ?: return
         this.render = render
@@ -194,7 +172,7 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
                 return
             }
         if (!hasSetTextureNames) {
-            session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.textureId))
+            session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.getTextureId()))
             hasSetTextureNames = true
         }
 
@@ -202,7 +180,7 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
 
         val camera = frame.camera
 
-        // Comunicazione degli errori e gestione della torcia
+        // Error communication and torch management
         val message: String? =
             when {
                 camera.trackingState == TrackingState.PAUSED &&
@@ -230,12 +208,12 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
         var semantic: Image? = null
         var depth: Image? = null
 
-        //Gestisce i tocchi
+        // Handle tap events
         activity.view.tapHelper.poll()?.let {
             handleTap()
         }
 
-        //Decide se e cosa mostrare a schermo
+        // Decides if and what to show
         if (active) {
             if (showSemanticImage) {
                 semantic = drawRendering(render, session, camera, frame)
@@ -247,14 +225,14 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
             return
         }
 
-        //Avvia le funzioni di analisi di frame e processing dei dati
+        // Starts frame processing
         processor.processFrame(frame, semantic, depth)
 
         semantic?.close()
         depth?.close()
     }
 
-    /** Funzione che si occupa della creazione dell'immagine da renderizzare a schermo */
+    /** Function that draws the rendering. */
     private fun drawRendering(
         render: SampleRender,
         session: Session,
@@ -270,7 +248,7 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
         // Notify ARCore session that the view size changed so that the perspective matrix and
         // the video background can be properly adjusted.
         if (!::render.isInitialized) {
-            Log.w("MainRenderer", "Render non inizializzato, frame ignorato")
+            Log.w("MainRenderer", "Render not initialized")
             return null
         }
 
@@ -313,7 +291,7 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
                     }
                 }
             } catch (e: NotYetAvailableException) {
-                // Le immagini non sono ancora pronte: normale
+                // Images still not ready
             }
         }
 
@@ -351,7 +329,7 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
         // Visualize planes.
         planeRenderer.drawPlanes(
             render,
-            session.getAllTrackables<Plane>(Plane::class.java),
+            session.getAllTrackables(Plane::class.java),
             camera.displayOrientedPose,
             projectionMatrix
         )
@@ -367,7 +345,7 @@ class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
         getAllTrackables(Plane::class.java).any { it.trackingState == TrackingState.TRACKING }
 
     /** Update state based on the current frame's light estimation. */
-    fun handleTap() {
+    private fun handleTap() {
         active = true
         showSemanticImage = !showSemanticImage
         Log.d("MainRenderer", "Tap detected: $showSemanticImage")

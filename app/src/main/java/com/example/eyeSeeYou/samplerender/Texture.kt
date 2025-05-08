@@ -13,189 +13,167 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.eyeSeeYou.samplerender;
+package com.example.eyeSeeYou.samplerender
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.opengl.GLES11Ext;
-import android.opengl.GLES30;
-import android.util.Log;
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.opengl.GLES11Ext
+import android.opengl.GLES30
+import android.util.Log
+import com.example.eyeSeeYou.samplerender.GLError.maybeLogGLError
+import com.example.eyeSeeYou.samplerender.GLError.maybeThrowGLException
+import java.io.Closeable
+import java.io.IOException
+import java.nio.ByteBuffer
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.nio.ByteBuffer;
+/** A GPU-side texture.  */
+class Texture @JvmOverloads constructor(
+    render: SampleRender?, /* package-private */
+    val target: Target, wrapMode: WrapMode, useMipmaps: Boolean = true
+) :
+    Closeable {
+    private val textureId = intArrayOf(0)
 
-/** A GPU-side texture. */
-public class Texture implements Closeable {
-  private static final String TAG = Texture.class.getSimpleName();
-
-  private final int[] textureId = {0};
-  private final Target target;
-
-  /**
-   * Describes the way the texture's edges are rendered.
-   *
-   * @see <a
-   *     href="https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glTexParameter.xhtml">GL_TEXTURE_WRAP_S</a>.
-   */
-  public enum WrapMode {
-    CLAMP_TO_EDGE(GLES30.GL_CLAMP_TO_EDGE),
-    MIRRORED_REPEAT(GLES30.GL_MIRRORED_REPEAT),
-    REPEAT(GLES30.GL_REPEAT);
-
-    /* package-private */
-    final int glesEnum;
-
-    private WrapMode(int glesEnum) {
-      this.glesEnum = glesEnum;
+    /**
+     * Describes the way the texture's edges are rendered.
+     *
+     * @see [GL_TEXTURE_WRAP_S](https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glTexParameter.xhtml).
+     */
+    enum class WrapMode(/* package-private */val glesEnum: Int) {
+        CLAMP_TO_EDGE(GLES30.GL_CLAMP_TO_EDGE),
+        MIRRORED_REPEAT(GLES30.GL_MIRRORED_REPEAT),
+        REPEAT(GLES30.GL_REPEAT)
     }
-  }
 
-  /**
-   * Describes the target this texture is bound to.
-   *
-   * @see <a
-   *     href="https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glBindTexture.xhtml">glBindTexture</a>.
-   */
-  public enum Target {
-    TEXTURE_2D(GLES30.GL_TEXTURE_2D),
-    TEXTURE_EXTERNAL_OES(GLES11Ext.GL_TEXTURE_EXTERNAL_OES),
-    TEXTURE_CUBE_MAP(GLES30.GL_TEXTURE_CUBE_MAP);
-
-    final int glesEnum;
-
-    private Target(int glesEnum) {
-      this.glesEnum = glesEnum;
+    /**
+     * Describes the target this texture is bound to.
+     *
+     * @see [glBindTexture](https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glBindTexture.xhtml).
+     */
+    enum class Target(val glesEnum: Int) {
+        TEXTURE_2D(GLES30.GL_TEXTURE_2D),
+        TEXTURE_EXTERNAL_OES(GLES11Ext.GL_TEXTURE_EXTERNAL_OES),
+        TEXTURE_CUBE_MAP(GLES30.GL_TEXTURE_CUBE_MAP)
     }
-  }
 
-  /**
-   * Describes the color format of the texture.
-   *
-   * @see <a
-   *     href="https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glTexImage2D.xhtml">glTexImage2d</a>.
-   */
-  public enum ColorFormat {
-    LINEAR(GLES30.GL_RGBA8),
-    SRGB(GLES30.GL_SRGB8_ALPHA8);
-
-    final int glesEnum;
-
-    private ColorFormat(int glesEnum) {
-      this.glesEnum = glesEnum;
+    /**
+     * Describes the color format of the texture.
+     *
+     * @see [glTexImage2d](https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glTexImage2D.xhtml).
+     */
+    enum class ColorFormat(val glesEnum: Int) {
+        LINEAR(GLES30.GL_RGBA8),
+        SRGB(GLES30.GL_SRGB8_ALPHA8)
     }
-  }
 
-  /**
-   * Construct an empty {/@link Texture}.
-   *
-   * <p>Since {/@link Texture}s created in this way are not populated with data, this method is
-   * mostly only useful for creating {/@link Target.TEXTURE_EXTERNAL_OES} textures. See {/@link
-   * #createFromAsset} if you want a texture with data.
-   */
-  public Texture(SampleRender render, Target target, WrapMode wrapMode) {
-    this(render, target, wrapMode, /*useMipmaps=*/ true);
-  }
+    /**
+     * Construct an empty {/@link Texture}.
+     *
+     *
+     * Since {/@link Texture}s created in this way are not populated with data, this method is
+     * mostly only useful for creating {/@link Target.TEXTURE_EXTERNAL_OES} textures. See {/@link
+     * #createFromAsset} if you want a texture with data.
+     */
+    init {
+        GLES30.glGenTextures(1, textureId, 0)
+        maybeThrowGLException("Texture creation failed", "glGenTextures")
 
-  public Texture(SampleRender render, Target target, WrapMode wrapMode, boolean useMipmaps) {
-    this.target = target;
+        val minFilter = if (useMipmaps) GLES30.GL_LINEAR_MIPMAP_LINEAR else GLES30.GL_LINEAR
 
-    GLES30.glGenTextures(1, textureId, 0);
-    GLError.maybeThrowGLException("Texture creation failed", "glGenTextures");
+        try {
+            GLES30.glBindTexture(target.glesEnum, textureId[0])
+            maybeThrowGLException("Failed to bind texture", "glBindTexture")
+            GLES30.glTexParameteri(target.glesEnum, GLES30.GL_TEXTURE_MIN_FILTER, minFilter)
+            maybeThrowGLException("Failed to set texture parameter", "glTexParameteri")
+            GLES30.glTexParameteri(target.glesEnum, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+            maybeThrowGLException("Failed to set texture parameter", "glTexParameteri")
 
-    int minFilter = useMipmaps ? GLES30.GL_LINEAR_MIPMAP_LINEAR : GLES30.GL_LINEAR;
-
-    try {
-      GLES30.glBindTexture(target.glesEnum, textureId[0]);
-      GLError.maybeThrowGLException("Failed to bind texture", "glBindTexture");
-      GLES30.glTexParameteri(target.glesEnum, GLES30.GL_TEXTURE_MIN_FILTER, minFilter);
-      GLError.maybeThrowGLException("Failed to set texture parameter", "glTexParameteri");
-      GLES30.glTexParameteri(target.glesEnum, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR);
-      GLError.maybeThrowGLException("Failed to set texture parameter", "glTexParameteri");
-
-      GLES30.glTexParameteri(target.glesEnum, GLES30.GL_TEXTURE_WRAP_S, wrapMode.glesEnum);
-      GLError.maybeThrowGLException("Failed to set texture parameter", "glTexParameteri");
-      GLES30.glTexParameteri(target.glesEnum, GLES30.GL_TEXTURE_WRAP_T, wrapMode.glesEnum);
-      GLError.maybeThrowGLException("Failed to set texture parameter", "glTexParameteri");
-    } catch (Throwable t) {
-      close();
-      throw t;
+            GLES30.glTexParameteri(target.glesEnum, GLES30.GL_TEXTURE_WRAP_S, wrapMode.glesEnum)
+            maybeThrowGLException("Failed to set texture parameter", "glTexParameteri")
+            GLES30.glTexParameteri(target.glesEnum, GLES30.GL_TEXTURE_WRAP_T, wrapMode.glesEnum)
+            maybeThrowGLException("Failed to set texture parameter", "glTexParameteri")
+        } catch (t: Throwable) {
+            close()
+            throw t
+        }
     }
-  }
 
-  /** Create a texture from the given asset file name. */
-  public static Texture createFromAsset(
-      SampleRender render, String assetFileName, WrapMode wrapMode, ColorFormat colorFormat)
-      throws IOException {
-    Texture texture = new Texture(render, Target.TEXTURE_2D, wrapMode);
-    Bitmap bitmap = null;
-    try {
-      // The following lines up to glTexImage2D could technically be replaced with
-      // GLUtils.texImage2d, but this method does not allow for loading sRGB images.
-
-      // Load and convert the bitmap and copy its contents to a direct ByteBuffer. Despite its name,
-      // the ARGB_8888 config is actually stored in RGBA order.
-      bitmap =
-          convertBitmapToConfig(
-              BitmapFactory.decodeStream(render.getAssets().open(assetFileName)),
-              Bitmap.Config.ARGB_8888);
-      ByteBuffer buffer = ByteBuffer.allocateDirect(bitmap.getByteCount());
-      bitmap.copyPixelsToBuffer(buffer);
-      buffer.rewind();
-
-      GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, texture.getTextureId());
-      GLError.maybeThrowGLException("Failed to bind texture", "glBindTexture");
-      GLES30.glTexImage2D(
-          GLES30.GL_TEXTURE_2D,
-          /*level=*/ 0,
-          colorFormat.glesEnum,
-          bitmap.getWidth(),
-          bitmap.getHeight(),
-          /*border=*/ 0,
-          GLES30.GL_RGBA,
-          GLES30.GL_UNSIGNED_BYTE,
-          buffer);
-      GLError.maybeThrowGLException("Failed to populate texture data", "glTexImage2D");
-      GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D);
-      GLError.maybeThrowGLException("Failed to generate mipmaps", "glGenerateMipmap");
-    } catch (Throwable t) {
-      texture.close();
-      throw t;
-    } finally {
-      if (bitmap != null) {
-        bitmap.recycle();
-      }
+    override fun close() {
+        if (textureId[0] != 0) {
+            GLES30.glDeleteTextures(1, textureId, 0)
+            maybeLogGLError(Log.WARN, TAG, "Failed to free texture", "glDeleteTextures")
+            textureId[0] = 0
+        }
     }
-    return texture;
-  }
 
-  @Override
-  public void close() {
-    if (textureId[0] != 0) {
-      GLES30.glDeleteTextures(1, textureId, 0);
-      GLError.maybeLogGLError(Log.WARN, TAG, "Failed to free texture", "glDeleteTextures");
-      textureId[0] = 0;
+    /** Retrieve the native texture ID.  */
+    fun getTextureId(): Int {
+        return textureId[0]
     }
-  }
 
-  /** Retrieve the native texture ID. */
-  public int getTextureId() {
-    return textureId[0];
-  }
+    companion object {
+        private val TAG: String = Texture::class.java.simpleName
 
-  /* package-private */
-  Target getTarget() {
-    return target;
-  }
+        /** Create a texture from the given asset file name.  */
+        @Throws(IOException::class)
+        fun createFromAsset(
+            render: SampleRender,
+            assetFileName: String,
+            wrapMode: WrapMode,
+            colorFormat: ColorFormat
+        ): Texture {
+            val texture = Texture(render, Target.TEXTURE_2D, wrapMode)
+            var bitmap: Bitmap? = null
+            try {
+                // The following lines up to glTexImage2D could technically be replaced with
+                // GLUtils.texImage2d, but this method does not allow for loading sRGB images.
 
-  private static Bitmap convertBitmapToConfig(Bitmap bitmap, Bitmap.Config config) {
-    // We use this method instead of BitmapFactory.Options.outConfig to support a minimum of Android
-    // API level 24.
-    if (bitmap.getConfig() == config) {
-      return bitmap;
+                // Load and convert the bitmap and copy its contents to a direct ByteBuffer. Despite its name,
+                // the ARGB_8888 config is actually stored in RGBA order.
+
+                bitmap =
+                    convertBitmapToConfig(
+                        BitmapFactory.decodeStream(render.assets.open(assetFileName)),
+                        Bitmap.Config.ARGB_8888
+                    )
+                val buffer = ByteBuffer.allocateDirect(bitmap.byteCount)
+                bitmap.copyPixelsToBuffer(buffer)
+                buffer.rewind()
+
+                GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, texture.getTextureId())
+                maybeThrowGLException("Failed to bind texture", "glBindTexture")
+                GLES30.glTexImage2D(
+                    GLES30.GL_TEXTURE_2D,  /*level=*/
+                    0,
+                    colorFormat.glesEnum,
+                    bitmap.width,
+                    bitmap.height,  /*border=*/
+                    0,
+                    GLES30.GL_RGBA,
+                    GLES30.GL_UNSIGNED_BYTE,
+                    buffer
+                )
+                maybeThrowGLException("Failed to populate texture data", "glTexImage2D")
+                GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D)
+                maybeThrowGLException("Failed to generate mipmaps", "glGenerateMipmap")
+            } catch (t: Throwable) {
+                texture.close()
+                throw t
+            } finally {
+                bitmap?.recycle()
+            }
+            return texture
+        }
+
+        private fun convertBitmapToConfig(bitmap: Bitmap, config: Bitmap.Config): Bitmap {
+            // We use this method instead of BitmapFactory.Options.outConfig to support a minimum of Android
+            // API level 24.
+            if (bitmap.config == config) {
+                return bitmap
+            }
+            val result = bitmap.copy(config,  /*isMutable=*/false)
+            bitmap.recycle()
+            return result
+        }
     }
-    Bitmap result = bitmap.copy(config, /*isMutable=*/ false);
-    bitmap.recycle();
-    return result;
-  }
 }
