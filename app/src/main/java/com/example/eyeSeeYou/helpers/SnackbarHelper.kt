@@ -13,153 +13,140 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.eyeSeeYou.helpers;
+package com.example.eyeSeeYou.helpers
 
-import android.app.Activity;
-import android.view.View;
-import android.widget.TextView;
-
-import com.google.android.material.snackbar.BaseTransientBottomBar;
-import com.google.android.material.snackbar.Snackbar;
+import android.R
+import android.app.Activity
+import android.view.View
+import android.widget.TextView
+import com.google.android.material.snackbar.BaseTransientBottomBar.BaseCallback
+import com.google.android.material.snackbar.Snackbar
 
 /**
  * Helper to manage the sample snackbar. Hides the Android boilerplate code, and exposes simpler
  * methods.
  */
-public final class SnackbarHelper {
-  private static final int BACKGROUND_COLOR = 0xbf323232;
-  private Snackbar messageSnackbar;
-  private enum DismissBehavior { HIDE, SHOW, FINISH };
-  private int maxLines = 2;
-  private String lastMessage = "";
-  private View snackbarView;
+class SnackbarHelper {
+    private var messageSnackbar: Snackbar? = null
 
-  public boolean isShowing() {
-    return messageSnackbar != null;
-  }
-
-  /** Shows a snackbar with a given message. */
-  public void showMessage(Activity activity, String message) {
-    if (!message.isEmpty() && (!isShowing() || !lastMessage.equals(message))) {
-      lastMessage = message;
-      show(activity, message, DismissBehavior.HIDE);
+    private enum class DismissBehavior {
+        HIDE, SHOW, FINISH
     }
-  }
 
-  /** Shows a snackbar with a given message, and a dismiss button. */
-  public void showMessageWithDismiss(Activity activity, String message) {
-    show(activity, message, DismissBehavior.SHOW);
-  }
+    private var maxLines = 2
+    private var lastMessage = ""
+    private var snackbarView: View? = null
 
-  /** Shows a snackbar with a given message for Snackbar.LENGTH_SHORT milliseconds */
-  public void showMessageForShortDuration(Activity activity, String message) {
-    show(activity, message, DismissBehavior.SHOW, Snackbar.LENGTH_SHORT);
-  }
+    val isShowing: Boolean
+        get() = messageSnackbar != null
 
-  /** Shows a snackbar with a given message for Snackbar.LENGTH_LONG milliseconds */
-  public void showMessageForLongDuration(Activity activity, String message) {
-    show(activity, message, DismissBehavior.SHOW, Snackbar.LENGTH_LONG);
-  }
-
-  /**
-   * Shows a snackbar with a given error message. When dismissed, will finish the activity. Useful
-   * for notifying errors, where no further interaction with the activity is possible.
-   */
-  public void showError(Activity activity, String errorMessage) {
-    show(activity, errorMessage, DismissBehavior.FINISH);
-  }
-
-  /**
-   * Hides the currently showing snackbar, if there is one. Safe to call from any thread. Safe to
-   * call even if snackbar is not shown.
-   */
-  public void hide(Activity activity) {
-    if (!isShowing()) {
-      return;
+    /** Shows a snackbar with a given message.  */
+    fun showMessage(activity: Activity, message: String) {
+        if (!message.isEmpty() && (!isShowing || lastMessage != message)) {
+            lastMessage = message
+            show(activity, message, DismissBehavior.HIDE)
+        }
     }
-    lastMessage = "";
-    Snackbar messageSnackbarToHide = messageSnackbar;
-    messageSnackbar = null;
-    activity.runOnUiThread(
-        new Runnable() {
-          @Override
-          public void run() {
-            messageSnackbarToHide.dismiss();
-          }
-        });
-  }
 
-  public void setMaxLines(int lines) {
-    maxLines = lines;
-  }
+    /** Shows a snackbar with a given message, and a dismiss button.  */
+    fun showMessageWithDismiss(activity: Activity, message: String) {
+        show(activity, message, DismissBehavior.SHOW)
+    }
 
-  /** Returns whether the snackbar is currently being shown with an indefinite duration. */
-  public boolean isDurationIndefinite() {
-    return isShowing() && messageSnackbar.getDuration() == Snackbar.LENGTH_INDEFINITE;
-  }
+    /** Shows a snackbar with a given message for Snackbar.LENGTH_SHORT milliseconds  */
+    fun showMessageForShortDuration(activity: Activity, message: String) {
+        show(activity, message, DismissBehavior.SHOW, Snackbar.LENGTH_SHORT)
+    }
 
-  /**
-   * Sets the view that will be used to find a suitable parent view to hold the Snackbar view.
-   *
-   * <p>To use the root layout ({@link android.R.id.content}), pass in {@code null}.
-   *
-   * @param snackbarView the view to pass to {@link
-   *     Snackbar#make(…)} which will be used to find a
-   *     suitable parent, which is a {@link androidx.coordinatorlayout.widget.CoordinatorLayout}, or
-   *     the window decor's content view, whichever comes first.
-   */
-  public void setParentView(View snackbarView) {
-    this.snackbarView = snackbarView;
-  }
+    /** Shows a snackbar with a given message for Snackbar.LENGTH_LONG milliseconds  */
+    fun showMessageForLongDuration(activity: Activity, message: String) {
+        show(activity, message, DismissBehavior.SHOW, Snackbar.LENGTH_LONG)
+    }
 
-  private void show(Activity activity, String message, DismissBehavior dismissBehavior) {
-    show(activity, message, dismissBehavior, Snackbar.LENGTH_INDEFINITE);
-  }
+    /**
+     * Shows a snackbar with a given error message. When dismissed, will finish the activity. Useful
+     * for notifying errors, where no further interaction with the activity is possible.
+     */
+    fun showError(activity: Activity, errorMessage: String) {
+        show(activity, errorMessage, DismissBehavior.FINISH)
+    }
 
-  private void show(
-      final Activity activity,
-      final String message,
-      final DismissBehavior dismissBehavior,
-      int duration) {
-    activity.runOnUiThread(
-        new Runnable() {
-          @Override
-          public void run() {
+    /**
+     * Hides the currently showing snackbar, if there is one. Safe to call from any thread. Safe to
+     * call even if snackbar is not shown.
+     */
+    fun hide(activity: Activity) {
+        if (!isShowing) {
+            return
+        }
+        lastMessage = ""
+        val messageSnackbarToHide = messageSnackbar!!
+        messageSnackbar = null
+        activity.runOnUiThread { messageSnackbarToHide.dismiss() }
+    }
+
+    fun setMaxLines(lines: Int) {
+        maxLines = lines
+    }
+
+    val isDurationIndefinite: Boolean
+        /** Returns whether the snackbar is currently being shown with an indefinite duration.  */
+        get() = isShowing && messageSnackbar!!.duration == Snackbar.LENGTH_INDEFINITE
+
+    /**
+     * Sets the view that will be used to find a suitable parent view to hold the Snackbar view.
+     *
+     *
+     * To use the root layout ([android.R.id.content]), pass in `null`.
+     *
+     * @param snackbarView the view to pass to [     ][Snackbar.make] which will be used to find a
+     * suitable parent, which is a [androidx.coordinatorlayout.widget.CoordinatorLayout], or
+     * the window decor's content view, whichever comes first.
+     */
+    fun setParentView(snackbarView: View?) {
+        this.snackbarView = snackbarView
+    }
+
+    private fun show(
+        activity: Activity,
+        message: String,
+        dismissBehavior: DismissBehavior,
+        duration: Int = Snackbar.LENGTH_INDEFINITE
+    ) {
+        activity.runOnUiThread {
             messageSnackbar =
                 Snackbar.make(
-                    snackbarView == null
-                        ? activity.findViewById(android.R.id.content)
-                        : snackbarView,
+                    snackbarView?:activity.findViewById(R.id.content),
                     message,
-                    duration);
-            messageSnackbar.getView().setBackgroundColor(BACKGROUND_COLOR);
+                    duration
+                )
+            messageSnackbar!!.view.setBackgroundColor(BACKGROUND_COLOR)
             if (dismissBehavior != DismissBehavior.HIDE && duration == Snackbar.LENGTH_INDEFINITE) {
-              messageSnackbar.setAction(
-                  "Dismiss",
-                  new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                      messageSnackbar.dismiss();
-                    }
-                  });
-              if (dismissBehavior == DismissBehavior.FINISH) {
-                messageSnackbar.addCallback(
-                    new BaseTransientBottomBar.BaseCallback<Snackbar>() {
-                      @Override
-                      public void onDismissed(Snackbar transientBottomBar, int event) {
-                        super.onDismissed(transientBottomBar, event);
-                        activity.finish();
-                      }
-                    });
-              }
+                messageSnackbar!!.setAction(
+                    "Dismiss"
+                ) { messageSnackbar!!.dismiss() }
+                if (dismissBehavior == DismissBehavior.FINISH) {
+                    messageSnackbar!!.addCallback(
+                        object : BaseCallback<Snackbar?>() {
+                            override fun onDismissed(
+                                transientBottomBar: Snackbar?,
+                                event: Int
+                            ) {
+                                super.onDismissed(transientBottomBar, event)
+                                activity.finish()
+                            }
+                        })
+                }
             }
-            ((TextView)
-                    messageSnackbar
-                        .getView()
-                        .findViewById(com.google.android.material.R.id.snackbar_text))
-                .setMaxLines(maxLines);
-            messageSnackbar.show();
-          }
-        });
-  }
+            (messageSnackbar!!
+                .view
+                .findViewById<View>(com.google.android.material.R.id.snackbar_text) as TextView).maxLines =
+                maxLines
+            messageSnackbar!!.show()
+        }
+    }
+
+    companion object {
+        private const val BACKGROUND_COLOR = -0x40cdcdce
+    }
 }

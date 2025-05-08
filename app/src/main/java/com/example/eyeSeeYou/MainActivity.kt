@@ -44,6 +44,7 @@ class MainActivity : AppCompatActivity() {
                     when (exception) {
                         is UnavailableUserDeclinedInstallationException ->
                             "Please install Google Play Services for AR"
+
                         is UnavailableApkTooOldException -> "Please update ARCore"
                         is UnavailableSdkTooOldException -> "Please update this app"
                         is UnavailableDeviceNotCompatibleException -> "This device does not support AR"
@@ -90,11 +91,11 @@ class MainActivity : AppCompatActivity() {
                 focusMode = Config.FocusMode.AUTO
 
                 semanticMode =
-                        if (session.isSemanticModeSupported(Config.SemanticMode.ENABLED)){
-                            Config.SemanticMode.ENABLED
-                        } else {
-                            Config.SemanticMode.DISABLED
-                        }
+                    if (session.isSemanticModeSupported(Config.SemanticMode.ENABLED)) {
+                        Config.SemanticMode.ENABLED
+                    } else {
+                        Config.SemanticMode.DISABLED
+                    }
                 depthMode =
                     if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
                         Config.DepthMode.AUTOMATIC
@@ -102,7 +103,7 @@ class MainActivity : AppCompatActivity() {
                         Config.DepthMode.DISABLED
                     }
                 imageStabilizationMode =
-                    if (session.isImageStabilizationModeSupported(Config.ImageStabilizationMode.EIS) && eisSettings.isEisEnabled) {
+                    if (session.isImageStabilizationModeSupported(Config.ImageStabilizationMode.EIS) && eisSettings.isEisEnabled()) {
                         Config.ImageStabilizationMode.EIS
                     } else {
                         Config.ImageStabilizationMode.OFF
@@ -153,11 +154,19 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, results: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        results: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, results)
         if (!CameraPermissionHelper.hasCameraPermission(this)) {
             // Use toast instead of snackbar here since the activity will exit.
-            Toast.makeText(this, "Camera permission is needed to run this application", Toast.LENGTH_LONG)
+            Toast.makeText(
+                this,
+                "Camera permission is needed to run this application",
+                Toast.LENGTH_LONG
+            )
                 .show()
             if (!CameraPermissionHelper.shouldShowRequestPermissionRationale(this)) {
                 // Permission denied with checking "Do not ask again".

@@ -30,7 +30,7 @@ import java.io.IOException
 import java.nio.ByteBuffer
 
 /** Renders the HelloAR application using google example Renderer. */
-class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
+class MainRenderer(val activity: MainActivity, val processor: MainProcessor) :
     SampleRender.Renderer, DefaultLifecycleObserver {
     companion object {
         val TAG = "HelloArRenderer"
@@ -58,7 +58,7 @@ class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
     lateinit var backgroundRenderer: BackgroundRenderer
     lateinit var virtualSceneFramebuffer: Framebuffer
 
-    private var active =true
+    private var active = true
     private var showSemanticImage = false
     private var hasSetTextureNames = false
 
@@ -88,7 +88,6 @@ class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
     val trackingStateHelper = TrackingStateHelper(activity)
 
 
-
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
         hasSetTextureNames = false
@@ -107,7 +106,11 @@ class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
             virtualSceneFramebuffer = Framebuffer(render, /*width=*/ 1, /*height=*/ 1)
 
             cubemapFilter =
-                SpecularCubemapFilter(render, CUBEMAP_RESOLUTION, CUBEMAP_NUMBER_OF_IMPORTANCE_SAMPLES)
+                SpecularCubemapFilter(
+                    render,
+                    CUBEMAP_RESOLUTION,
+                    CUBEMAP_NUMBER_OF_IMPORTANCE_SAMPLES
+                )
             // Load environmental lighting values lookup table
             dfgTexture =
                 Texture(
@@ -149,7 +152,10 @@ class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
                     "shaders/point_cloud.frag",
                     /*defines=*/ null
                 )
-                    .setVec4("u_Color", floatArrayOf(31.0f / 255.0f, 188.0f / 255.0f, 210.0f / 255.0f, 1.0f))
+                    .setVec4(
+                        "u_Color",
+                        floatArrayOf(31.0f / 255.0f, 188.0f / 255.0f, 210.0f / 255.0f, 1.0f)
+                    )
                     .setFloat("u_PointSize", 5.0f)
 
             // four entries per vertex: X, Y, Z, confidence
@@ -157,7 +163,12 @@ class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
                 VertexBuffer(render, /*numberOfEntriesPerVertex=*/ 4, /*entries=*/ null)
             val pointCloudVertexBuffers = arrayOf(pointCloudVertexBuffer)
             pointCloudMesh =
-                Mesh(render, Mesh.PrimitiveMode.POINTS, /*indexBuffer=*/ null, pointCloudVertexBuffers)
+                Mesh(
+                    render,
+                    Mesh.PrimitiveMode.POINTS, /*indexBuffer=*/
+                    null,
+                    pointCloudVertexBuffers
+                )
 
         } catch (e: IOException) {
             Log.e(TAG, "Failed to read a required asset file", e)
@@ -197,24 +208,27 @@ class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
                 camera.trackingState == TrackingState.PAUSED &&
                         camera.trackingFailureReason == TrackingFailureReason.NONE ->
                     activity.getString(R.string.searching_planes)
+
                 camera.trackingState == TrackingState.PAUSED ->
                     TrackingStateHelper.getTrackingFailureReasonString(camera)
-                session.hasTrackingPlane()->
+
+                session.hasTrackingPlane() ->
                     "Looking for obstacles"
-                session.hasTrackingPlane()-> null
+
+                session.hasTrackingPlane() -> null
                 else -> activity.getString(R.string.searching_planes)
             }
         if (message == null) {
             activity.view.snackbarHelper.hide(activity)
-        } else if(camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_LIGHT || camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_FEATURES){
+        } else if (camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_LIGHT || camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_FEATURES) {
             activity.view.snackbarHelper.showMessage(activity, message)
-            (activity as? MainActivity)?.setTorch(true,session)
+            (activity as? MainActivity)?.setTorch(true, session)
         } else {
             activity.view.snackbarHelper.showMessage(activity, message)
         }
 
-        var semantic:Image? = null
-        var depth:Image? = null
+        var semantic: Image? = null
+        var depth: Image? = null
 
         //Gestisce i tocchi
         activity.view.tapHelper.poll()?.let {
@@ -222,29 +236,33 @@ class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
         }
 
         //Decide se e cosa mostrare a schermo
-       if (active){
-            if (showSemanticImage){
-                semantic = drawRendering(render,session,camera,frame)
+        if (active) {
+            if (showSemanticImage) {
+                semantic = drawRendering(render, session, camera, frame)
             } else {
-                depth = drawRendering(render,session,camera,frame)
+                depth = drawRendering(render, session, camera, frame)
             }
-       } else {
+        } else {
             trackingStateHelper.updateKeepScreenOnFlag(TrackingState.PAUSED)
             return
         }
 
         //Avvia le funzioni di analisi di frame e processing dei dati
-       processor.processFrame(frame,semantic,depth)
+        processor.processFrame(frame, semantic, depth)
 
         semantic?.close()
         depth?.close()
     }
 
     /** Funzione che si occupa della creazione dell'immagine da renderizzare a schermo */
-    private fun drawRendering(render: SampleRender,session: Session, camera: Camera, frame: Frame): Image?{
+    private fun drawRendering(
+        render: SampleRender,
+        session: Session,
+        camera: Camera,
+        frame: Frame
+    ): Image? {
 
-        var image:Image? = null
-
+        var image: Image? = null
 
 
         // -- Update per-frame state
@@ -261,7 +279,10 @@ class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
                 render,
                 activity.depthSettings.depthColorVisualizationEnabled()
             )
-            backgroundRenderer.setUseOcclusion(render, activity.depthSettings.useDepthForOcclusion())
+            backgroundRenderer.setUseOcclusion(
+                render,
+                activity.depthSettings.useDepthForOcclusion()
+            )
         } catch (e: IOException) {
             Log.e(TAG, "Failed to read a required asset file", e)
             showError("Failed to read a required asset file: $e")
@@ -354,4 +375,4 @@ class MainRenderer(val activity: MainActivity,val processor: MainProcessor) :
 
     private fun showError(errorMessage: String) =
         activity.view.snackbarHelper.showError(activity, errorMessage)
-    }
+}

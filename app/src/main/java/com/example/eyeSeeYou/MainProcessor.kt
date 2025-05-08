@@ -20,11 +20,7 @@ class MainProcessor {
         }
     }
 
-    private fun processSemantic(image: Image) {
-        // algoritmo obstacle detection
-    }
-
-    private fun processDepth(image: Image) {
+    private fun findObstacles(image: Image) {
         // algoritmo obstacle detection
     }
 }

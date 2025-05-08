@@ -13,41 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.eyeSeeYou.helpers;
+package com.example.eyeSeeYou.helpers
 
-import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.Context
+import android.content.SharedPreferences
 
 /**
- * A class providing persistent EIS preference across instances using {@code
- * android.content.SharedPreferences}.
+ * A class providing persistent EIS preference across instances using `android.content.SharedPreferences`.
  */
-public class EisSettings {
-  public static final String SHARED_PREFERENCE_ID = "SHARED_PREFERENCE_EIS_OPTIONS";
-  public static final String SHARED_PREFERENCE_EIS_ENABLED = "eis_enabled";
-  private boolean eisEnabled = true;
-  private SharedPreferences sharedPreferences;
+class EisSettings {
+    private var eisEnabled = true
+    private var sharedPreferences: SharedPreferences? = null
 
-  /** Creates shared preference entry for EIS setting. */
-  public void onCreate(Context context) {
-    sharedPreferences = context.getSharedPreferences(SHARED_PREFERENCE_ID, Context.MODE_PRIVATE);
-    eisEnabled = sharedPreferences.getBoolean(SHARED_PREFERENCE_EIS_ENABLED, false);
-  }
-
-  /** Returns saved EIS state. */
-  public boolean isEisEnabled() {
-    return eisEnabled;
-  }
-
-  /** Sets and saves the EIS using {@code android.content.SharedPreferences} */
-  public void setEisEnabled(boolean enable) {
-    if (enable == eisEnabled) {
-      return;
+    /** Creates shared preference entry for EIS setting.  */
+    fun onCreate(context: Context) {
+        sharedPreferences = context.getSharedPreferences(SHARED_PREFERENCE_ID, Context.MODE_PRIVATE)
+        eisEnabled = sharedPreferences!!.getBoolean(SHARED_PREFERENCE_EIS_ENABLED, false)
     }
 
-    eisEnabled = enable;
-    SharedPreferences.Editor editor = sharedPreferences.edit();
-    editor.putBoolean(SHARED_PREFERENCE_EIS_ENABLED, eisEnabled);
-    editor.apply();
-  }
+    /** Returns saved EIS state.  */
+    fun isEisEnabled(): Boolean {
+        return eisEnabled
+    }
+
+    /** Sets and saves the EIS using `android.content.SharedPreferences`  */
+    fun setEisEnabled(enable: Boolean) {
+        if (enable == eisEnabled) {
+            return
+        }
+
+        eisEnabled = enable
+        val editor = sharedPreferences!!.edit()
+        editor.putBoolean(SHARED_PREFERENCE_EIS_ENABLED, eisEnabled)
+        editor.apply()
+    }
+
+    companion object {
+        const val SHARED_PREFERENCE_ID: String = "SHARED_PREFERENCE_EIS_OPTIONS"
+        const val SHARED_PREFERENCE_EIS_ENABLED: String = "eis_enabled"
+    }
 }
