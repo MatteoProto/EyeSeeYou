@@ -82,11 +82,6 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-//    fun configureCamera(session: Session) {
-//        val filter = CameraConfigFilter(session)
-//        filter.setTargetFps(EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_30))
-//    }
-
     fun configureSession(session: Session) {
         session.configure(
             session.config.apply {

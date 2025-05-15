@@ -2,7 +2,6 @@ package com.example.eyeSeeYou
 
 import android.media.Image
 import android.opengl.GLES30
-import android.opengl.Matrix
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -43,7 +42,7 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
     private lateinit var backgroundRenderer: BackgroundRenderer
     private lateinit var virtualSceneFramebuffer: Framebuffer
 
-    private var active = true
+    private var activeCamera = true
     private var showSemanticImage = false
     private var hasSetTextureNames = false
 
@@ -52,18 +51,12 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
     private lateinit var pointCloudMesh: Mesh
     private lateinit var pointCloudShader: Shader
 
-    // Keep track of the last point cloud rendered to avoid updating the VBO if point cloud
-    // was not changed.  Do this using the timestamp since we can't compare PointCloud objects.
-    private var lastPointCloudTimestamp: Long = 0
-
     // Environmental HDR
     private lateinit var dfgTexture: Texture
 
     // Temporary matrix allocated here to reduce number of allocations for each frame.
     private val viewMatrix = FloatArray(16)
     private val projectionMatrix = FloatArray(16)
-
-    private val modelViewProjectionMatrix = FloatArray(16) // projection x view x model
 
     private val session
         get() = activity.arCoreSessionHelper.session
@@ -192,18 +185,9 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
 
                 session.hasTrackingPlane() ->
                     "Looking for obstacles"
-
-                session.hasTrackingPlane() -> null
-                else -> activity.getString(R.string.searching_planes)
+                else -> null
             }
-        if (message == null) {
-            activity.view.snackbarHelper.hide(activity)
-        } else if (camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_LIGHT || camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_FEATURES) {
-            activity.view.snackbarHelper.showMessage(activity, message)
-            (activity as? MainActivity)?.setTorch(true, session)
-        } else {
-            activity.view.snackbarHelper.showMessage(activity, message)
-        }
+
 
         var semantic: Image? = null
         var depth: Image? = null
@@ -212,41 +196,42 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
         activity.view.tapHelper.poll()?.let {
             handleTap()
         }
-
+        val image: Image?
         // Decides if and what to show
-        if (active) {
+        if (activeCamera) {
+            image = drawRendering(render, camera, frame)
             if (showSemanticImage) {
-                semantic = drawRendering(render, session, camera, frame)
+                semantic = image
             } else {
-                depth = drawRendering(render, session, camera, frame)
+                depth = image
             }
         } else {
             trackingStateHelper.updateKeepScreenOnFlag(TrackingState.PAUSED)
-            return
+            image = null
         }
 
         // Starts frame processing
-        processor.processFrame(frame, semantic, depth)
+        val output = processor.processFrame(frame, semantic, depth)
 
-        semantic?.close()
-        depth?.close()
+        if (message == null) {
+            activity.view.snackbarHelper.hide(activity)
+        } else if (camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_LIGHT || camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_FEATURES) {
+            activity.view.snackbarHelper.showMessage(activity, message)
+            (activity as? MainActivity)?.setTorch(true, session)
+        } else {
+            activity.view.snackbarHelper.showMessage(activity, output)
+        }
+        image?.close()
     }
 
     /** Function that draws the rendering. */
     private fun drawRendering(
         render: SampleRender,
-        session: Session,
         camera: Camera,
         frame: Frame
     ): Image? {
-
         var image: Image? = null
 
-
-        // -- Update per-frame state
-
-        // Notify ARCore session that the view size changed so that the perspective matrix and
-        // the video background can be properly adjusted.
         if (!::render.isInitialized) {
             Log.w("MainRenderer", "Render not initialized")
             return null
@@ -267,8 +252,6 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
             return null
         }
 
-        // BackgroundRenderer.updateDisplayGeometry must be called every frame to update the coordinates
-        // used to draw the background camera image.
         backgroundRenderer.updateDisplayGeometry(frame)
 
         if (camera.trackingState == TrackingState.TRACKING) {
@@ -276,19 +259,13 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
                 if (showSemanticImage) {
                     val semanticImage = frame.acquireSemanticImage()
                     image = semanticImage
-                    semanticImage.use { semanticImage ->
-                        backgroundRenderer.setUseDepthVisualization(render, false)
-                        backgroundRenderer.updateCameraSemanticTexture(semanticImage)
-                        semanticImage.close()
-                    }
+                    backgroundRenderer.setUseDepthVisualization(render, false)
+                    backgroundRenderer.updateCameraSemanticTexture(semanticImage)
                 } else {
                     val depthImage = frame.acquireDepthImage16Bits()
                     image = depthImage
-                    depthImage.use { depthImage ->
-                        backgroundRenderer.setUseDepthVisualization(render, true)
-                        backgroundRenderer.updateCameraDepthTexture(depthImage)
-                        depthImage.close()
-                    }
+                    backgroundRenderer.setUseDepthVisualization(render, true)
+                    backgroundRenderer.updateCameraDepthTexture(depthImage)
                 }
             } catch (e: NotYetAvailableException) {
                 // Images still not ready
@@ -316,23 +293,6 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
 
         // Get camera matrix and draw.
         camera.getViewMatrix(viewMatrix, 0)
-        frame.acquirePointCloud().use { pointCloud ->
-            if (pointCloud.timestamp > lastPointCloudTimestamp) {
-                pointCloudVertexBuffer.set(pointCloud.points)
-                lastPointCloudTimestamp = pointCloud.timestamp
-            }
-            Matrix.multiplyMM(modelViewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
-            pointCloudShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix)
-            render.draw(pointCloudMesh, pointCloudShader)
-        }
-
-        // Visualize planes.
-        planeRenderer.drawPlanes(
-            render,
-            session.getAllTrackables(Plane::class.java),
-            camera.displayOrientedPose,
-            projectionMatrix
-        )
 
         // Compose the virtual scene with the background.
         backgroundRenderer.drawVirtualScene(render, virtualSceneFramebuffer, Z_NEAR, Z_FAR)
@@ -346,7 +306,7 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
 
     /** Update state based on the current frame's light estimation. */
     private fun handleTap() {
-        active = true
+        activeCamera = true
         showSemanticImage = !showSemanticImage
         Log.d("MainRenderer", "Tap detected: $showSemanticImage")
     }
