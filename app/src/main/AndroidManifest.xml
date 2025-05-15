@@ -18,6 +18,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.eyeSeeYou">
 
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <uses-permission android:name="android.permission.CAMERA"/>
     <!-- Required to post notifications for Android T+ devices -->
 
