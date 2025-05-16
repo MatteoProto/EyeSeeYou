@@ -36,8 +36,9 @@ class MainActivity : AppCompatActivity() {
      lateinit var renderer: MainRenderer
      lateinit var processor: MainProcessor
      lateinit var preferencesManager: PreferencesManager
-     lateinit var vocalAssistant: VocalAssistant
-     lateinit var vibrationManager: VibrationManager
+     lateinit var vocalAssistant : VocalAssistant
+     lateinit var vibrationManager : VibrationManager
+
 
      val depthSettings = DepthSettings()
      val eisSettings = EisSettings()
@@ -86,7 +87,7 @@ class MainActivity : AppCompatActivity() {
         lifecycle.addObserver(arCoreSessionHelper)
 
         processor = MainProcessor()
-        renderer = MainRenderer(this, processor)
+        renderer = MainRenderer(this, vocalAssistant, vibrationManager, processor)
         lifecycle.addObserver(renderer)
 
         view = MainView(this)

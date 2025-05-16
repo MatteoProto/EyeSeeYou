@@ -28,9 +28,15 @@ import java.io.IOException
 import java.nio.ByteBuffer
 
 /** Renders the HelloAR application using google example Renderer. */
-class MainRenderer(val activity: MainActivity, private val processor: MainProcessor) :
+class MainRenderer(
+    val activity: MainActivity,
+    private val vocalAssistant: VocalAssistant,
+    private val vibrationManager: VibrationManager,
+    private val processor: MainProcessor) :
+
     SampleRender.Renderer, DefaultLifecycleObserver {
-    companion object {
+
+        companion object {
         const val TAG = "HelloArRenderer"
 
         private const val Z_NEAR = 0.1f
@@ -57,6 +63,10 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
     // Temporary matrix allocated here to reduce number of allocations for each frame.
     private val viewMatrix = FloatArray(16)
     private val projectionMatrix = FloatArray(16)
+
+
+    private var lastAlertTime = 0L //TEMPORANEA
+
 
     private val session
         get() = activity.arCoreSessionHelper.session
@@ -215,6 +225,14 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
 
         if (message == null) {
             activity.view.snackbarHelper.hide(activity)
+            if (session.hasTrackingPlane()) {
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastAlertTime > 3000) {
+                    vocalAssistant.speak("Attenzione, ostacolo davanti a te.")
+                    vibrationManager.shortVibration()
+                    lastAlertTime = currentTime
+                }
+            }
         } else if (camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_LIGHT || camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_FEATURES) {
             activity.view.snackbarHelper.showMessage(activity, message)
             (activity as? MainActivity)?.setTorch(true, session)
