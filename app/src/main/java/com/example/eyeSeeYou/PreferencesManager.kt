@@ -8,6 +8,7 @@ class PreferencesManager(context: Context) {
         private const val PREFS_NAME = "tts_prefs"
         private const val KEY_TTS_ENABLED = "tts_enabled"
         private const val KEY_PREFERRED_LANGUAGE = "preferred_language"
+        private const val KEY_PHONE_VIBRATION_ENABLED = "phone_vibration_enabled"
         private const val KEY_WATCH_VIBRATION_ACTIVE = "watch_vibration_active"
     }
 
@@ -27,6 +28,14 @@ class PreferencesManager(context: Context) {
     // Imposta la lingua preferita
     fun setPreferredLanguage(language: String) =
         prefs.edit().putString(KEY_PREFERRED_LANGUAGE, language).apply()
+
+    // Verifica se la vibrazione telefono è attiva (default true)
+    fun isPhoneVibrationEnabled(): Boolean =
+        prefs.getBoolean(KEY_PHONE_VIBRATION_ENABLED, true)
+
+    // Imposta lo stato della vibrazione telefono
+    fun setPhoneVibrationEnabled(enabled: Boolean) =
+        prefs.edit().putBoolean(KEY_PHONE_VIBRATION_ENABLED, enabled).apply()
 
     // Verifica se la vibrazione orologio è attiva (default false)
     fun isWatchVibrationActive(): Boolean =

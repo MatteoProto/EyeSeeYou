@@ -65,7 +65,7 @@ class MainRenderer(
     private val projectionMatrix = FloatArray(16)
 
 
-    private var lastAlertTime = 0L //TEMPORANEA
+    private var lastAlertTime = 0L
 
 
     private val session
@@ -166,14 +166,13 @@ class MainRenderer(
     override fun onDrawFrame(render: SampleRender) {
         val session = session ?: return
         this.render = render
-        val frame =
-            try {
-                session.update()
-            } catch (e: CameraNotAvailableException) {
-                Log.e(TAG, "Camera not available during onDrawFrame", e)
-                showError("Camera not available. Try restarting the app.")
-                return
-            }
+        val frame = try {
+            session.update()
+        } catch (e: CameraNotAvailableException) {
+            Log.e(TAG, "Camera not available during onDrawFrame", e)
+            showError("Camera not available. Try restarting the app.")
+            return
+        }
         if (!hasSetTextureNames) {
             session.setCameraTextureNames(intArrayOf(backgroundRenderer.cameraColorTexture.getTextureId()))
             hasSetTextureNames = true
@@ -184,20 +183,18 @@ class MainRenderer(
         val camera = frame.camera
 
         // Error communication and torch management
-        val message: String? =
-            when {
-                camera.trackingState == TrackingState.PAUSED &&
-                        camera.trackingFailureReason == TrackingFailureReason.NONE ->
-                    activity.getString(R.string.searching_planes)
+        val message: String? = when {
+            camera.trackingState == TrackingState.PAUSED &&
+                    camera.trackingFailureReason == TrackingFailureReason.NONE ->
+                activity.getString(R.string.searching_planes)
 
-                camera.trackingState == TrackingState.PAUSED ->
-                    TrackingStateHelper.getTrackingFailureReasonString(camera)
+            camera.trackingState == TrackingState.PAUSED ->
+                TrackingStateHelper.getTrackingFailureReasonString(camera)
 
-                session.hasTrackingPlane() ->
-                    "Looking for obstacles"
-                else -> null
-            }
-
+            session.hasTrackingPlane() ->
+                "Looking for obstacles"
+            else -> null
+        }
 
         var semantic: Image? = null
         var depth: Image? = null
@@ -220,20 +217,26 @@ class MainRenderer(
             image = null
         }
 
-        // Starts frame processing
+        // Process the frame with your MainProcessor
         val output = processor.processFrame(frame, semantic, depth)
 
         if (message == null) {
             activity.view.snackbarHelper.hide(activity)
-            if (session.hasTrackingPlane()) {
-                val currentTime = System.currentTimeMillis()
-                if (currentTime - lastAlertTime > 3000) {
-                    vocalAssistant.speak("Attenzione, ostacolo davanti a te.")
-                    vibrationManager.shortVibration()
-                    lastAlertTime = currentTime
-                }
+
+            // Ottieni le zone rilevanti dal processor
+            val zones = processor.getMostRelevantZones()
+
+            // Genera messaggio vocale in base alle zone
+            val alertMessage = vocalAssistant.getObstacleMessage(zones)
+
+            val currentTime = System.currentTimeMillis()
+            if (alertMessage.isNotBlank() && currentTime - lastAlertTime > 2000) {
+                vocalAssistant.speak(alertMessage)
+                vibrationManager.shortVibration()
+                lastAlertTime = currentTime
             }
-        } else if (camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_LIGHT || camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_FEATURES) {
+        } else if (camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_LIGHT ||
+            camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_FEATURES) {
             activity.view.snackbarHelper.showMessage(activity, message)
             (activity as? MainActivity)?.setTorch(true, session)
         } else {

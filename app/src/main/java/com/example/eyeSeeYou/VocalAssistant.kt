@@ -4,6 +4,7 @@ import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import java.util.*
+import com.example.eyeSeeYou.helpers.Zones
 
 class VocalAssistant(private val context: Context, private val preferencesManager: PreferencesManager) : TextToSpeech.OnInitListener {
 
@@ -58,14 +59,43 @@ class VocalAssistant(private val context: Context, private val preferencesManage
         }
     }
 
+    fun getObstacleMessage(zones: Set<Zones>): String {
+        if (zones.isEmpty()) return ""
+
+        val vertical = when {
+            Zones.LOW in zones -> "basso"
+            Zones.HIGH in zones -> "alto"
+            Zones.CENTER in zones -> "davanti"
+            else -> ""
+        }
+
+        val horizontal = when {
+            Zones.LEFT_WALL in zones -> "oggetto a sinistra"
+            Zones.RIGHT_WALL in zones -> "oggetto a destra"
+            Zones.LEFT in zones -> "a sinistra"
+            Zones.RIGHT in zones -> "a destra"
+            else -> ""
+        }
+
+        if (horizontal.contains("oggetto")) {
+            return "ostacolo $horizontal"
+        }
+
+        return when {
+            vertical.isNotEmpty() && horizontal.isNotEmpty() -> "ostacolo $vertical $horizontal"
+            vertical.isNotEmpty() -> "ostacolo $vertical"
+            horizontal.isNotEmpty() -> "ostacolo $horizontal"
+            else -> "ostacolo davanti"
+        }
+    }
+
     fun playMessage(type: MessageType, force: Boolean = false) {
         when (type) {
-            MessageType.WELCOME -> speak("Welcome to Eye-See-You.", force)
-            MessageType.WARNING_STEP -> speak("Warning, there's a step ahead of you.", force)
-            MessageType.WARNING_DESCENT -> speak("Caution, a descent is ahead.", force)
-            MessageType.WARNING_ASCENT -> speak("Caution, an ascent is ahead.", force)
-            MessageType.WARNING_OBSTACLE -> speak("Warning, obstacle very close.", force)
-            MessageType.WARNING -> speak("Warning, obstacle.", force)
+            MessageType.WELCOME -> speak("Benvenuto in EyeSeeYou.", force)
+            MessageType.WARNING_STEPDOWN -> speak("Attenzione, gradino in discesa.", force)
+            MessageType.WARNING_STEPUP -> speak("Attenzione, gradino in salita.", force)
+            MessageType.WARNING_OBSTACLE -> speak("Attenzione, ostacolo molto vicino.", force)
+            MessageType.WARNING -> speak("Attenzione, ostacolo rilevato.", force)
         }
     }
 
@@ -83,9 +113,11 @@ class VocalAssistant(private val context: Context, private val preferencesManage
 
 enum class MessageType {
     WELCOME,
-    WARNING_STEP,
-    WARNING_DESCENT,
-    WARNING_ASCENT,
+    WARNING_STEPUP,
+    WARNING_STEPDOWN,
     WARNING_OBSTACLE,
     WARNING
 }
+
+
+

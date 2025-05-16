@@ -70,4 +70,13 @@ class MainProcessor {
 
         return stableLabelsPosition
     }
+
+    fun getMostRelevantZones(): Set<Zones> {
+        val stableLabels = computeStableLabelPosition(history)
+        val allZones = mutableSetOf<Zones>()
+        for ((_, zones) in stableLabels) {
+            allZones.addAll(zones)
+        }
+        return allZones
+    }
 }

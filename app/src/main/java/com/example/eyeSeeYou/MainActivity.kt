@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresPermission
@@ -24,34 +25,62 @@ import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
 
-
 class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
     }
 
-     lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
-     lateinit var view: MainView
-     lateinit var renderer: MainRenderer
-     lateinit var processor: MainProcessor
-     lateinit var preferencesManager: PreferencesManager
-     lateinit var vocalAssistant : VocalAssistant
-     lateinit var vibrationManager : VibrationManager
+    lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
+    lateinit var view: MainView
+    lateinit var renderer: MainRenderer
+    lateinit var processor: MainProcessor
+    lateinit var preferencesManager: PreferencesManager
+    lateinit var vocalAssistant : VocalAssistant
+    lateinit var vibrationManager : VibrationManager
 
+    val depthSettings = DepthSettings()
+    val eisSettings = EisSettings()
 
-     val depthSettings = DepthSettings()
-     val eisSettings = EisSettings()
+    var torch = false
+    var torchTimer: Handler? = null
+    var isPaused = false //METTERE IN STOP ARCORE
 
-     var torch = false
-     var torchTimer: Handler? = null
+    private var y1 = 0f
+    private var y2 = 0f
+    private var screenHeight = 0
+
+    private val topExcludedAreaHeight = 200  // in pixel
+    private val bottomExcludedAreaHeight = 200  // in pixel
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    private fun toggleTTS() {
+        val newValue = !preferencesManager.isTTSEnabled()
+
+        preferencesManager.setTTSEnabled(newValue)
+        vibrationManager.shortVibration(force = true)
+
+        val message = if (newValue) "Sintesi vocale attivata" else "Sintesi vocale disattivata"
+        vocalAssistant.speak(message)
+    }
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    private fun toggleWatchVibration() {
+        val newValue = !preferencesManager.isWatchVibrationActive()
+        preferencesManager.setWatchVibrationActive(newValue)
+        vibrationManager.longVibration()
+        val message = if (newValue) "Vibrazione orologio attivata" else "Vibrazione orologio disattivata"
+        vocalAssistant.speak(message)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         preferencesManager = PreferencesManager(this)
+        screenHeight = resources.displayMetrics.heightPixels
+
         vocalAssistant = VocalAssistant(this, preferencesManager)
-        vibrationManager = VibrationManager(this)
+        vibrationManager = VibrationManager(this, preferencesManager)
 
         // UI con Jetpack Compose
         setContent {
@@ -64,7 +93,7 @@ class MainActivity : AppCompatActivity() {
             vocalAssistant.speak("Benvenuto in EyeSeeYou.")
         }
 
-        // Setup ARCore
+        //SETUP ARCore
         setupARCore()
     }
 
@@ -96,6 +125,23 @@ class MainActivity : AppCompatActivity() {
 
         SampleRender(view.surfaceView, renderer, assets)
 
+        view.surfaceView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_UP) {
+                val x = event.x
+                val y = event.y
+                val width = view.surfaceView.width
+                val height = view.surfaceView.height
+
+                if (x > width * 0.25 && x < width * 0.75 && y > height * 0.25 && y < height * 0.75) {
+                    togglePause()
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        }
         depthSettings.onCreate(this)
         eisSettings.onCreate(this)
     }
@@ -155,24 +201,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @RequiresPermission(Manifest.permission.VIBRATE)
-    private fun toggleTTS() {
-        val newValue = !preferencesManager.isTTSEnabled()
-        preferencesManager.setTTSEnabled(newValue)
-        vibrationManager.shortVibration()
-        val message = if (newValue) "Sintesi vocale attivata" else "Sintesi vocale disattivata"
-        vocalAssistant.speak(message)
-    }
-
-    @RequiresPermission(Manifest.permission.VIBRATE)
-    private fun toggleWatchVibration() {
-        val newValue = !preferencesManager.isWatchVibrationActive()
-        preferencesManager.setWatchVibrationActive(newValue)
-        vibrationManager.longVibration()
-        val message = if (newValue) "Vibrazione orologio attivata" else "Vibrazione orologio disattivata"
-        vocalAssistant.speak(message)
-    }
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -191,6 +219,42 @@ class MainActivity : AppCompatActivity() {
             }
             finish()
         }
+    }
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> y1 = event.y
+            MotionEvent.ACTION_UP -> {
+                y2 = event.y
+                val deltaY = y1 - y2
+
+                // SWIPE VERSO IL BASSO in area top (primi 200 px)
+                if (y1 < topExcludedAreaHeight && deltaY < -150) {
+                    toggleWatchVibration()
+                }
+                // SWIPE VERSO L'ALTO in area bottom (ultimi 200 px)
+                else if (y1 > screenHeight - bottomExcludedAreaHeight && deltaY > 150) {
+                    toggleTTS()
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
+    //STOP AND PAUSA AR
+    fun togglePause() {
+        isPaused = !isPaused
+        if (isPaused) {
+            vocalAssistant.speak("Sessione AR in pausa")
+        } else {
+            vocalAssistant.speak("Sessione AR ripresa")
+        }
+    }
+
+    override fun onDestroy() {
+        vocalAssistant.shutdown()
+        super.onDestroy()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

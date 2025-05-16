@@ -8,13 +8,15 @@ import android.os.Vibrator
 import android.util.Log
 import androidx.annotation.RequiresPermission
 
-class VibrationManager(private val context: Context) {
+class VibrationManager(private val context: Context,private val preferencesManager: PreferencesManager) {
 
-    private val vibrator: Vibrator? = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+    private val vibrator: Vibrator? = context.getSystemService(Vibrator::class.java)
 
     @RequiresPermission(Manifest.permission.VIBRATE)
-    fun shortVibration() {
-        vibrate(500)
+    fun shortVibration(force: Boolean = false) {
+        if (force || preferencesManager.isPhoneVibrationEnabled()) {
+            vibrate(500)
+        }
     }
 
     @RequiresPermission(Manifest.permission.VIBRATE)
