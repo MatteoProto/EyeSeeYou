@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language_changed_it">Lingua cambiata in italiano</string>
+    <string name="language_changed_en">Language changed to English</string>
+    <string name="command_not_recognized">Comando non riconosciuto</string>
+
+    <string name="welcome">Benvenuto in EyeSeeYou.</string>
+    <string name="pause">Sessione AR in pausa</string>
+    <string name="resume">Sessione AR ripresa</string>
+    <string name="tts_enabled">Sintesi vocale attivata</string>
+    <string name="tts_disabled">Sintesi vocale disattivata</string>
+    <string name="vibration_enabled">Vibrazione attivata</string>
+    <string name="vibration_disabled">Vibrazione disattivata</string>
+    <string name="camera_permission_required">La fotocamera è necessaria per usare l app</string>
+
+    <string name="warning_stepdown">Attenzione, gradino in discesa.</string>
+    <string name="warning_stepup">Attenzione, gradino in salita.</string>
+    <string name="warning_obstacle">Attenzione, ostacolo molto vicino.</string>
+    <string name="warning">Attenzione, ostacolo rilevato.</string>
+    <string name="vertical_low">basso</string>
+    <string name="vertical_high">alto</string>
+    <string name="vertical_center">davanti</string>
+    <string name="horizontal_object_left">oggetto a sinistra</string>
+    <string name="horizontal_object_right">oggetto a destra</string>
+    <string name="horizontal_left">a sinistra</string>
+    <string name="horizontal_right">a destra</string>
+    <string name="obstacle_vertical_horizontal">ostacolo %1$s %2$s</string>
+    <string name="obstacle_vertical">ostacolo %1$s</string>
+    <string name="obstacle_horizontal">ostacolo %1$s</string>
+    <string name="obstacle_center">ostacolo davanti</string>
+
+    <string name="error_install_ar">Installa Google Play Services for AR</string>
+    <string name="error_update_arcore">Aggiorna ARCore</string>
+    <string name="error_update_app">Aggiorna app</string>
+    <string name="error_not_compatible">Dispositivo non compatibile con AR</string>
+    <string name="error_camera_unavailable">Fotocamera non disponibile, riavvia app</string>
+    <string name="error_generic">Errore nella sessione AR: %1$s</string>
+</resources>

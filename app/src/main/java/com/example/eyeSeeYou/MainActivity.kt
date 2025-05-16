@@ -1,9 +1,13 @@
 package com.example.eyeSeeYou
 
 import android.Manifest
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.MotionEvent
 import android.widget.Toast
@@ -24,6 +28,7 @@ import com.google.ar.core.exceptions.UnavailableApkTooOldException
 import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -33,8 +38,10 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
     lateinit var view: MainView
+
     lateinit var renderer: MainRenderer
     lateinit var processor: MainProcessor
+
     lateinit var preferencesManager: PreferencesManager
     lateinit var vocalAssistant : VocalAssistant
     lateinit var vibrationManager : VibrationManager
@@ -46,6 +53,9 @@ class MainActivity : AppCompatActivity() {
     var torchTimer: Handler? = null
     var isPaused = false //METTERE IN STOP ARCORE
 
+    private lateinit var speechRecognizer: SpeechRecognizer
+    private lateinit var recognizerIntent: Intent
+
     private var y1 = 0f
     private var y2 = 0f
     private var screenHeight = 0
@@ -56,12 +66,11 @@ class MainActivity : AppCompatActivity() {
     @RequiresPermission(Manifest.permission.VIBRATE)
     private fun toggleTTS() {
         val newValue = !preferencesManager.isTTSEnabled()
-
         preferencesManager.setTTSEnabled(newValue)
         vibrationManager.shortVibration(force = true)
 
-        val message = if (newValue) "Sintesi vocale attivata" else "Sintesi vocale disattivata"
-        vocalAssistant.speak(message)
+        val type = if (newValue) MessageType.TTS_ENABLED else MessageType.TTS_DISABLED
+        vocalAssistant.playMessage(type, force = true)
     }
 
     @RequiresPermission(Manifest.permission.VIBRATE)
@@ -69,14 +78,44 @@ class MainActivity : AppCompatActivity() {
         val newValue = !preferencesManager.isWatchVibrationActive()
         preferencesManager.setWatchVibrationActive(newValue)
         vibrationManager.longVibration()
-        val message = if (newValue) "Vibrazione orologio attivata" else "Vibrazione orologio disattivata"
-        vocalAssistant.speak(message)
+
+        val type = if (newValue) MessageType.VIBRATION_ENABLED else MessageType.VIBRATION_DISABLED
+        vocalAssistant.playMessage(type, force = true)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         preferencesManager = PreferencesManager(this)
+
+        if (preferencesManager.getPreferredLanguage().isEmpty()) {
+            val systemLocale = Locale.getDefault().language
+            preferencesManager.setPreferredLanguage(systemLocale)
+        }
+
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, preferencesManager.getPreferredLanguage())
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Parla ora…")
+        }
+
+        speechRecognizer.setRecognitionListener(object : RecognitionListener {
+            override fun onResults(results: Bundle) {
+                val spokenText = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.get(0)?.lowercase() ?: return
+                handleVoiceCommand(spokenText)
+            }
+
+            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onError(error: Int) {}
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+
         screenHeight = resources.displayMetrics.heightPixels
 
         vocalAssistant = VocalAssistant(this, preferencesManager)
@@ -90,7 +129,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (preferencesManager.isTTSEnabled()) {
-            vocalAssistant.speak("Benvenuto in EyeSeeYou.")
+            vocalAssistant.playMessage(MessageType.WELCOME)
         }
 
         //SETUP ARCore
@@ -100,16 +139,17 @@ class MainActivity : AppCompatActivity() {
     private fun setupARCore() {
         arCoreSessionHelper = ARCoreSessionLifecycleHelper(this)
         arCoreSessionHelper.exceptionCallback = { exception ->
-            val message = when (exception) {
-                is UnavailableUserDeclinedInstallationException -> "Installa Google Play Services for AR"
-                is UnavailableApkTooOldException -> "Aggiorna ARCore"
-                is UnavailableSdkTooOldException -> "Aggiorna l'app"
-                is UnavailableDeviceNotCompatibleException -> "Dispositivo non compatibile con AR"
-                is CameraNotAvailableException -> "Fotocamera non disponibile, riavvia l'app"
-                else -> "Errore nella sessione AR: $exception"
-            }
-            Log.e(TAG, "ARCore exception", exception)
-            view.snackbarHelper.showError(this, message)
+             val message = when (exception) {
+                 is UnavailableUserDeclinedInstallationException -> getString(R.string.error_install_ar)
+                 is UnavailableApkTooOldException -> getString(R.string.error_update_arcore)
+                 is UnavailableSdkTooOldException -> getString(R.string.error_update_app)
+                 is UnavailableDeviceNotCompatibleException -> getString(R.string.error_not_compatible)
+                 is CameraNotAvailableException -> getString(R.string.error_camera_unavailable)
+                 else -> getString(R.string.error_generic, exception.localizedMessage ?: "Errore sconosciuto")
+             }
+
+             Log.e(TAG, "ARCore exception", exception)
+             view.snackbarHelper.showError(this, message)
         }
 
         arCoreSessionHelper.beforeSessionResume = ::configureSession
@@ -135,13 +175,19 @@ class MainActivity : AppCompatActivity() {
                 if (x > width * 0.25 && x < width * 0.75 && y > height * 0.25 && y < height * 0.75) {
                     togglePause()
                     true
-                } else {
+                }
+                else if (y > height * 0.55f && y < height * 0.85f) {
+                    startListening()
+                    true
+                }
+                else {
                     false
                 }
             } else {
                 false
             }
         }
+
         depthSettings.onCreate(this)
         eisSettings.onCreate(this)
     }
@@ -210,7 +256,7 @@ class MainActivity : AppCompatActivity() {
         if (!CameraPermissionHelper.hasCameraPermission(this)) {
             Toast.makeText(
                 this,
-                "La fotocamera è necessaria per usare l'app",
+                getString(R.string.camera_permission_required),
                 Toast.LENGTH_LONG
             ).show()
 
@@ -218,6 +264,44 @@ class MainActivity : AppCompatActivity() {
                 CameraPermissionHelper.launchPermissionSettings(this)
             }
             finish()
+        }
+    }
+
+    private fun startListening() {
+        speechRecognizer.startListening(recognizerIntent)
+    }
+
+    private fun handleVoiceCommand(command: String) {
+        val lowerCmd = command.lowercase()
+
+        when {
+            // Pause synonyms
+            listOf("pausa", "ferma", "stop").any { lowerCmd.contains(it) } -> {
+                if (!isPaused) togglePause()
+            }
+
+            // Resume synonyms
+            listOf("riprendi", "continua", "start").any { lowerCmd.contains(it) } -> {
+                if (isPaused) togglePause()
+            }
+
+            // Change language to Italian
+            listOf("italiano", "italia", "lingua italiana").any { lowerCmd.contains(it) } -> {
+                preferencesManager.setPreferredLanguage("it")
+                vocalAssistant.speak(getString(R.string.language_changed_it))
+                recreate()
+            }
+
+            // Change language to English
+            listOf("inglese", "english", "english language").any { lowerCmd.contains(it) } -> {
+                preferencesManager.setPreferredLanguage("en")
+                vocalAssistant.speak(getString(R.string.language_changed_en))
+                recreate()
+            }
+
+            else -> {
+                vocalAssistant.speak(getString(R.string.command_not_recognized))
+            }
         }
     }
 
@@ -245,11 +329,12 @@ class MainActivity : AppCompatActivity() {
     //STOP AND PAUSA AR
     fun togglePause() {
         isPaused = !isPaused
-        if (isPaused) {
-            vocalAssistant.speak("Sessione AR in pausa")
+        val type = if (isPaused) {
+            MessageType.PAUSE
         } else {
-            vocalAssistant.speak("Sessione AR ripresa")
+            MessageType.RESUME
         }
+        vocalAssistant.playMessage(type)
     }
 
     override fun onDestroy() {

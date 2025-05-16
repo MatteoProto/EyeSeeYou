@@ -1,20 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-   Copyright 2021 Google LLC
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
--->
 <resources>
+  <string name="language_changed_it">Lingua cambiata in italiano</string>
+  <string name="language_changed_en">Language changed to English</string>
+  <string name="command_not_recognized">Comando non riconosciuto</string>
+
   <string translatable="false" name="app_name">Eye See You</string>
   <string translatable="false" name="depth_use_explanation">When Depth is enabled on supported devices, virtual objects adapt to the environment by blending in with the real world.</string>
   <string translatable="false" name="button_text_enable_depth">Enable</string>
@@ -22,11 +12,45 @@
   <string translatable="false" name="options_title_with_depth">Your device supports depth</string>
   <string translatable="false" name="options_title_without_depth">Your device does not support depth</string>
   <string translatable="false" name="done">Done</string>
+
   <string-array translatable="false" name="depth_options_array">
     <item>Enable depth</item>
     <item>Show depth map</item>
   </string-array>
+
   <string translatable="false" name="searching_planes">Searching for surfaces...</string>
   <string translatable="false" name="waiting_taps">Tap on a surface to place an object.</string>
+
+  <string name="welcome">Welcome to EyeSeeYou.</string>
+  <string name="pause">AR session paused</string>
+  <string name="resume">AR session resumed</string>
+  <string name="tts_enabled">Text-to-speech enabled</string>
+  <string name="tts_disabled">Text-to-speech disabled</string>
+  <string name="vibration_enabled">Vibration enabled</string>
+  <string name="vibration_disabled">Vibration disabled</string>
+  <string name="camera_permission_required">Camera permission is required to use the app</string>
+
+  <string name="warning_stepdown">Warning, step down ahead.</string>
+  <string name="warning_stepup">Warning, step up ahead.</string>
+  <string name="warning_obstacle">Warning, obstacle very close.</string>
+  <string name="warning">Warning, obstacle detected.</string>
+  <string name="vertical_low">low</string>
+  <string name="vertical_high">high</string>
+  <string name="vertical_center">in front</string>
+  <string name="horizontal_object_left">object on the left</string>
+  <string name="horizontal_object_right">object on the right</string>
+  <string name="horizontal_left">on the left</string>
+  <string name="horizontal_right">on the right</string>
+  <string name="obstacle_vertical_horizontal">obstacle %1$s %2$s</string>
+  <string name="obstacle_vertical">obstacle %1$s</string>
+  <string name="obstacle_horizontal">obstacle %1$s</string>
+  <string name="obstacle_center">obstacle in front</string>
+
+  <string name="error_install_ar">Install Google Play Services for AR</string>
+  <string name="error_update_arcore">Update ARCore</string>
+  <string name="error_update_app">Update the app</string>
+  <string name="error_not_compatible">Device not compatible with AR</string>
+  <string name="error_camera_unavailable">Camera not available, please restart the app</string>
+  <string name="error_generic">AR session error: %1$s</string>
 
 </resources>

@@ -110,8 +110,6 @@ class Identifier {
         return nearbyLabels
     }
 
-
-
     private fun computeZonesForLabels(
         nearObjects: Set<SemanticLabel>,
         labeledPoints: Map<SemanticLabel, List<PointData>>,

@@ -28,16 +28,15 @@ class VocalAssistant(private val context: Context, private val preferencesManage
                 else -> Locale.ENGLISH
             }
             val result = tts?.setLanguage(locale)
-            isReady = result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED
+            isReady =
+                result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED
 
             if (isReady) {
-                // Saluto di benvenuto obbligatorio all'avvio
-                speak("Benvenuto in EyeSeeYou.", force = true)
+                val welcomeMessage = context.getString(R.string.welcome)
+                speak(welcomeMessage, force = true)
             } else {
                 Log.e("VocalAssistant", "Lingua non supportata o dati mancanti.")
             }
-        } else {
-            Log.e("VocalAssistant", "Inizializzazione TTS fallita.")
         }
     }
 
@@ -59,44 +58,47 @@ class VocalAssistant(private val context: Context, private val preferencesManage
         }
     }
 
-    fun getObstacleMessage(zones: Set<Zones>): String {
-        if (zones.isEmpty()) return ""
+        fun getObstacleMessage(zones: Set<Zones>): String {
+            if (zones.isEmpty()) return ""
 
-        val vertical = when {
-            Zones.LOW in zones -> "basso"
-            Zones.HIGH in zones -> "alto"
-            Zones.CENTER in zones -> "davanti"
-            else -> ""
-        }
+            val vertical = when {
+                Zones.LOW in zones -> context.getString(R.string.vertical_low)
+                Zones.HIGH in zones -> context.getString(R.string.vertical_high)
+                Zones.CENTER in zones -> context.getString(R.string.vertical_center)
+                else -> ""
+            }
 
-        val horizontal = when {
-            Zones.LEFT_WALL in zones -> "oggetto a sinistra"
-            Zones.RIGHT_WALL in zones -> "oggetto a destra"
-            Zones.LEFT in zones -> "a sinistra"
-            Zones.RIGHT in zones -> "a destra"
-            else -> ""
-        }
+            val horizontal = when {
+                Zones.LEFT_WALL in zones -> context.getString(R.string.horizontal_object_left)
+                Zones.RIGHT_WALL in zones -> context.getString(R.string.horizontal_object_right)
+                Zones.LEFT in zones -> context.getString(R.string.horizontal_left)
+                Zones.RIGHT in zones -> context.getString(R.string.horizontal_right)
+                else -> ""
+            }
 
-        if (horizontal.contains("oggetto")) {
-            return "ostacolo $horizontal"
+            return when {
+                vertical.isNotEmpty() && horizontal.isNotEmpty() -> context.getString(R.string.obstacle_vertical_horizontal, vertical, horizontal)
+                vertical.isNotEmpty() -> context.getString(R.string.obstacle_vertical, vertical)
+                horizontal.isNotEmpty() -> context.getString(R.string.obstacle_horizontal, horizontal)
+                else -> context.getString(R.string.obstacle_center)
+            }
         }
-
-        return when {
-            vertical.isNotEmpty() && horizontal.isNotEmpty() -> "ostacolo $vertical $horizontal"
-            vertical.isNotEmpty() -> "ostacolo $vertical"
-            horizontal.isNotEmpty() -> "ostacolo $horizontal"
-            else -> "ostacolo davanti"
-        }
-    }
 
     fun playMessage(type: MessageType, force: Boolean = false) {
-        when (type) {
-            MessageType.WELCOME -> speak("Benvenuto in EyeSeeYou.", force)
-            MessageType.WARNING_STEPDOWN -> speak("Attenzione, gradino in discesa.", force)
-            MessageType.WARNING_STEPUP -> speak("Attenzione, gradino in salita.", force)
-            MessageType.WARNING_OBSTACLE -> speak("Attenzione, ostacolo molto vicino.", force)
-            MessageType.WARNING -> speak("Attenzione, ostacolo rilevato.", force)
+        val message = when (type) {
+            MessageType.WELCOME -> context.getString(R.string.welcome)
+            MessageType.WARNING_STEPDOWN -> context.getString(R.string.warning_stepdown)
+            MessageType.WARNING_STEPUP -> context.getString(R.string.warning_stepup)
+            MessageType.WARNING_OBSTACLE -> context.getString(R.string.warning_obstacle)
+            MessageType.WARNING -> context.getString(R.string.warning)
+            MessageType.PAUSE -> context.getString(R.string.pause)
+            MessageType.RESUME -> context.getString(R.string.resume)
+            MessageType.TTS_ENABLED -> context.getString(R.string.tts_enabled)
+            MessageType.TTS_DISABLED -> context.getString(R.string.tts_disabled)
+            MessageType.VIBRATION_ENABLED -> context.getString(R.string.vibration_enabled)
+            MessageType.VIBRATION_DISABLED -> context.getString(R.string.vibration_disabled)
         }
+        speak(message, force)
     }
 
     fun shutdown() {
@@ -116,7 +118,13 @@ enum class MessageType {
     WARNING_STEPUP,
     WARNING_STEPDOWN,
     WARNING_OBSTACLE,
-    WARNING
+    WARNING,
+    PAUSE,
+    RESUME,
+    TTS_ENABLED,
+    TTS_DISABLED,
+    VIBRATION_ENABLED,
+    VIBRATION_DISABLED
 }
 
 
