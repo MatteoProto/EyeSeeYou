@@ -3,7 +3,6 @@
 <resources>
   <string name="language_changed_it">Lingua cambiata in italiano</string>
   <string name="language_changed_en">Language changed to English</string>
-  <string name="command_not_recognized">Comando non riconosciuto</string>
 
   <string translatable="false" name="app_name">Eye See You</string>
   <string translatable="false" name="depth_use_explanation">When Depth is enabled on supported devices, virtual objects adapt to the environment by blending in with the real world.</string>
@@ -47,6 +46,10 @@
   <string name="obstacle_center">obstacle in front</string>
 
   <string name="voice_help">Voice Help</string>
+  <string name="ar_paused">AR session paused</string>
+  <string name="ar_resumed">AR session resumed</string>
+  <string name="command_not_recognized">Command not recognized</string>
+  <string name="goodbye">Closing the application. See you soon!</string>
 
   <string name="error_install_ar">Install Google Play Services for AR</string>
   <string name="error_update_arcore">Update ARCore</string>

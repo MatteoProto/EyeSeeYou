@@ -97,6 +97,10 @@ class VocalAssistant(private val context: Context, private val preferencesManage
             MessageType.TTS_DISABLED -> context.getString(R.string.tts_disabled)
             MessageType.VIBRATION_ENABLED -> context.getString(R.string.vibration_enabled)
             MessageType.VIBRATION_DISABLED -> context.getString(R.string.vibration_disabled)
+            MessageType.AR_PAUSED -> context.getString(R.string.ar_paused)
+            MessageType.AR_RESUMED -> context.getString(R.string.ar_resumed)
+            MessageType.COMMAND_NOT_RECOGNIZED -> context.getString(R.string.command_not_recognized)
+            MessageType.GOODBYE -> context.getString(R.string.goodbye)
         }
         speak(message, force)
     }
@@ -124,7 +128,11 @@ enum class MessageType {
     TTS_ENABLED,
     TTS_DISABLED,
     VIBRATION_ENABLED,
-    VIBRATION_DISABLED
+    VIBRATION_DISABLED,
+    AR_PAUSED,
+    AR_RESUMED,
+    COMMAND_NOT_RECOGNIZED,
+    GOODBYE
 }
 
 

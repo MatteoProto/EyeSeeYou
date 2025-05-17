@@ -2,7 +2,6 @@
 <resources>
     <string name="language_changed_it">Lingua cambiata in italiano</string>
     <string name="language_changed_en">Language changed to English</string>
-    <string name="command_not_recognized">Comando non riconosciuto</string>
 
     <string name="welcome">Benvenuto in EyeSeeYou.</string>
     <string name="pause">Sessione AR in pausa</string>
@@ -30,6 +29,10 @@
     <string name="obstacle_center">ostacolo davanti</string>
 
     <string name="voice_help">Help Vocale</string>
+    <string name="ar_paused">Sessione AR messa in pausa</string>
+    <string name="ar_resumed">Sessione AR ripresa</string>
+    <string name="command_not_recognized">Comando non riconosciuto</string>
+    <string name="goodbye">Chiusura dell applicazione. A presto!</string>
 
     <string name="error_install_ar">Installa Google Play Services for AR</string>
     <string name="error_update_arcore">Aggiorna ARCore</string>

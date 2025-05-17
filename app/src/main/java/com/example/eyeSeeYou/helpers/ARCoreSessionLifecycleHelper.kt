@@ -16,6 +16,7 @@
 package com.google.ar.core.examples.java.common.helpers
 
 import android.app.Activity
+import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
@@ -108,6 +109,15 @@ class ARCoreSessionLifecycleHelper(
     session?.pause()
   }
 
+  fun pauseSession() {
+    session?.pause()
+    Log.d("ARCoreSession", "Sessione AR messa in pausa")
+  }
+
+  fun resumeSession() {
+    session?.resume()
+    Log.d("ARCoreSession", "Sessione AR ripresa")
+  }
   override fun onDestroy(owner: LifecycleOwner) {
     // Explicitly close the ARCore session to release native resources.
     // Review the API reference for important considerations before calling close() in apps with

@@ -1,6 +1,8 @@
 package com.example.eyeSeeYou
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -51,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     lateinit var vibrationManager : VibrationManager
     private val REQUEST_RECORD_AUDIO_PERMISSION = 101
 
+    private lateinit var voiceCommandManager: VoiceCommandManager
+
 
     val depthSettings = DepthSettings()
     val eisSettings = EisSettings()
@@ -89,6 +93,18 @@ class MainActivity : AppCompatActivity() {
         vocalAssistant.playMessage(type, force = true)
     }
 
+    private fun toggleARCorePauseResume() {
+        if (!isPaused) {
+            arCoreSessionHelper.pauseSession()
+            isPaused = true
+            vocalAssistant.playMessage(MessageType.AR_PAUSED)
+        } else {
+            arCoreSessionHelper.resumeSession()
+            isPaused = false
+            vocalAssistant.playMessage(MessageType.AR_RESUMED)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -99,43 +115,30 @@ class MainActivity : AppCompatActivity() {
             preferencesManager.setPreferredLanguage(systemLocale)
         }
 
-        //Imposta il layout XML con il bottone
         setContentView(R.layout.activity_main)
 
-        //Inizializza VocalAssistant e VibrationManager
+        // Inizializza VocalAssistant e VibrationManager
         vocalAssistant = VocalAssistant(this, preferencesManager)
         vibrationManager = VibrationManager(this, preferencesManager)
 
-        //Inizializza SpeechRecognizer e intent
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-        recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, preferencesManager.getPreferredLanguage())
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Parla ora…")
-        }
-
-        speechRecognizer.setRecognitionListener(object : RecognitionListener {
-            override fun onResults(results: Bundle) {
-                val spokenText = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    ?.get(0)?.lowercase() ?: return
-                handleVoiceCommand(spokenText)
-            }
-
-            override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {}
-            override fun onError(error: Int) {}
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-
-        //Setup bottone per avviare riconoscimento vocale
+        // Setup bottone per attivare il riconoscimento vocale
         val btnTranscribe = findViewById<Button>(R.id.btn_transcribe)
+
+        // Inizializza VoiceCommandManager e passagli il bottone e il callback
+        voiceCommandManager = VoiceCommandManager(
+            context = this,
+            language = preferencesManager.getPreferredLanguage(),
+            button = btnTranscribe,
+            onCommandRecognized = { command ->
+                handleVoiceCommand(command, this)
+            }
+        )
+
         btnTranscribe.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                startListening()
+                animateButtonPress(btnTranscribe)         // animazione al tocco (opzionale)
+                startListeningAnimation(btnTranscribe)    // inizia il lampeggio
+                voiceCommandManager.startListening()
             } else {
                 ActivityCompat.requestPermissions(
                     this,
@@ -151,10 +154,9 @@ class MainActivity : AppCompatActivity() {
             vocalAssistant.playMessage(MessageType.WELCOME)
         }
 
-        //Setup ARCore
+        // Setup ARCore
         setupARCore()
     }
-
     private fun setupARCore() {
         arCoreSessionHelper = ARCoreSessionLifecycleHelper(this).apply {
             exceptionCallback = { exception ->
@@ -185,7 +187,6 @@ class MainActivity : AppCompatActivity() {
 
         SampleRender(view.surfaceView, renderer, assets)
 
-        //Touch invisibile per mettere in pausa/riprendere la sintesi vocale
         view.surfaceView.setOnTouchListener { _, event ->
             if (event.action != MotionEvent.ACTION_UP) return@setOnTouchListener false
 
@@ -195,7 +196,7 @@ class MainActivity : AppCompatActivity() {
             val height = view.surfaceView.height
 
             if (x > width * 0.25 && x < width * 0.75 && y > height * 0.25 && y < height * 0.75) {
-                togglePause()
+                toggleARCorePauseResume()
                 true
             } else {
                 false
@@ -267,6 +268,16 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == REQUEST_RECORD_AUDIO_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                voiceCommandManager.startListening()
+            } else {
+                Toast.makeText(this, "Permesso microfono necessario per riconoscimento vocale", Toast.LENGTH_LONG).show()
+            }
+        }
+
         if (!CameraPermissionHelper.hasCameraPermission(this)) {
             Toast.makeText(
                 this,
@@ -281,44 +292,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun startListening() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            speechRecognizer.startListening(recognizerIntent)
-        } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO_PERMISSION)
-        }
-    }
-
-    private fun handleVoiceCommand(command: String) {
-        val lowerCmd = command.lowercase()
+    fun handleVoiceCommand(command: String, context: Context) {
+        val normalized = command.trim().lowercase()
 
         when {
-            // Pause synonyms
-            listOf("pausa", "ferma", "stop").any { lowerCmd.contains(it) } -> {
-                if (!isPaused) togglePause()
+            normalized in listOf("stop", "pause", "pausa", "ferma") -> {
+                arCoreSessionHelper.pauseSession()
+                vocalAssistant.playMessage(MessageType.AR_PAUSED)
             }
 
-            // Resume synonyms
-            listOf("riprendi", "continua", "start").any { lowerCmd.contains(it) } -> {
-                if (isPaused) togglePause()
+            normalized in listOf("resume", "riprendi", "continua") -> {
+                try {
+                    val session = arCoreSessionHelper.session
+                    if (session != null) {
+                        arCoreSessionHelper.resumeSession()
+                        vocalAssistant.playMessage(MessageType.AR_RESUMED)
+                    } else {
+                        vocalAssistant.playMessage(MessageType.COMMAND_NOT_RECOGNIZED)
+                    }
+                } catch (e: Exception) {
+                    Log.e("VoiceCommand", "Errore nel resume della sessione", e)
+                    vocalAssistant.playMessage(MessageType.COMMAND_NOT_RECOGNIZED)
+                }
             }
-
-            // Change language to Italian
-            listOf("italiano", "italia", "lingua italiana").any { lowerCmd.contains(it) } -> {
-                preferencesManager.setPreferredLanguage("it")
-                vocalAssistant.speak(getString(R.string.language_changed_it))
-                recreate()
-            }
-
-            // Change language to English
-            listOf("inglese", "english", "english language").any { lowerCmd.contains(it) } -> {
-                preferencesManager.setPreferredLanguage("en")
-                vocalAssistant.speak(getString(R.string.language_changed_en))
-                recreate()
+            normalized in listOf("chiudi app", "chiudi", "esci", "close app", "close") -> {
+                vocalAssistant.playMessage(MessageType.GOODBYE)
+                Handler(Looper.getMainLooper()).postDelayed({
+                    (context as Activity).finish()
+                }, 1500)
             }
 
             else -> {
-                vocalAssistant.speak(getString(R.string.command_not_recognized))
+                vocalAssistant.playMessage(MessageType.COMMAND_NOT_RECOGNIZED)
             }
         }
     }
@@ -355,9 +360,53 @@ class MainActivity : AppCompatActivity() {
         vocalAssistant.playMessage(type)
     }
 
+    private fun animateButtonPress(button: Button) {
+        button.animate()
+            .scaleX(0.95f)
+            .scaleY(0.95f)
+            .setDuration(100)
+            .withEndAction {
+                button.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(100)
+                    .start()
+            }
+            .start()
+    }
+
+    private var isListening = false
+
+    private fun startListeningAnimation(button: Button) {
+        isListening = true
+        button.animate()
+            .alpha(0.5f)
+            .setDuration(500)
+            .withEndAction(object : Runnable {
+                override fun run() {
+                    if (!isListening) {
+                        button.alpha = 1f
+                        return
+                    }
+                    button.animate()
+                        .alpha(1f)
+                        .setDuration(500)
+                        .withEndAction(this)
+                        .start()
+                }
+            })
+            .start()
+    }
+
+    private fun stopListeningAnimation(button: Button) {
+        isListening = false
+        button.animate().alpha(1f).setDuration(100).start()
+    }
+
     override fun onDestroy() {
         vocalAssistant.shutdown()
         speechRecognizer.destroy()
+        voiceCommandManager.stop()
         super.onDestroy()
     }
 
