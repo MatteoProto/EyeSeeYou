@@ -33,16 +33,17 @@ class VoiceCommandManager(
 
     init {
         speechRecognizer.setRecognitionListener(object : RecognitionListener {
+
             override fun onResults(results: Bundle) {
-                button.animate().alpha(1f).setDuration(100).start()
-                isListening = false
+                stopListeningAnimation()
                 val spokenText = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull()?.lowercase() ?: return
+                isListening = false
                 onCommandRecognized(spokenText)
             }
 
             override fun onError(error: Int) {
-                button.animate().alpha(1f).setDuration(100).start()
+                stopListeningAnimation()
                 Log.e("VoiceCommandManager", "Speech recognition error code: $error")
                 isListening = false
 
@@ -78,11 +79,20 @@ class VoiceCommandManager(
         }
     }
 
+    private fun stopListeningAnimation() {
+        isListening = false
+        button.animate().alpha(1f).setDuration(100).start()
+    }
+
     fun stopListening() {
         if (isListening) {
             speechRecognizer.stopListening()
             isListening = false
         }
+    }
+
+    fun isListening(): Boolean {
+        return isListening
     }
 
     fun stop() {

@@ -8,20 +8,16 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.MotionEvent
 import android.widget.Button
 import android.widget.Toast
-import androidx.activity.compose.setContent
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.eyeSeeYou.samplerender.SampleRender
-import com.example.eyeSeeYou.theme.EyeSeeYouTheme
 import com.google.ar.core.Config
 import com.google.ar.core.Session
 import com.google.ar.core.examples.java.common.helpers.ARCoreSessionLifecycleHelper
@@ -124,7 +120,6 @@ class MainActivity : AppCompatActivity() {
         // Setup bottone per attivare il riconoscimento vocale
         val btnTranscribe = findViewById<Button>(R.id.btn_transcribe)
 
-        // Inizializza VoiceCommandManager e passagli il bottone e il callback
         voiceCommandManager = VoiceCommandManager(
             context = this,
             language = preferencesManager.getPreferredLanguage(),
@@ -136,9 +131,14 @@ class MainActivity : AppCompatActivity() {
 
         btnTranscribe.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                animateButtonPress(btnTranscribe)         // animazione al tocco (opzionale)
-                startListeningAnimation(btnTranscribe)    // inizia il lampeggio
-                voiceCommandManager.startListening()
+                if (voiceCommandManager.isListening()) {
+                    voiceCommandManager.stopListening()        // Ferma l'ascolto
+                    stopListeningAnimation(btnTranscribe)      // Ferma l'animazione lampeggiante
+                } else {
+                    animateButtonPress(btnTranscribe)           // Animazione pressione bottone
+                    startListeningAnimation(btnTranscribe)      // Inizia lampeggio
+                    voiceCommandManager.startListening()        // Avvia ascolto
+                }
             } else {
                 ActivityCompat.requestPermissions(
                     this,
@@ -375,16 +375,16 @@ class MainActivity : AppCompatActivity() {
             .start()
     }
 
-    private var isListening = false
+    private var isListeningAnimationActive = false
 
     private fun startListeningAnimation(button: Button) {
-        isListening = true
+        isListeningAnimationActive = true
         button.animate()
             .alpha(0.5f)
             .setDuration(500)
             .withEndAction(object : Runnable {
                 override fun run() {
-                    if (!isListening) {
+                    if (!isListeningAnimationActive) {
                         button.alpha = 1f
                         return
                     }
@@ -399,17 +399,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun stopListeningAnimation(button: Button) {
-        isListening = false
+        isListeningAnimationActive = false
         button.animate().alpha(1f).setDuration(100).start()
     }
-
-    override fun onDestroy() {
-        vocalAssistant.shutdown()
-        speechRecognizer.destroy()
-        voiceCommandManager.stop()
-        super.onDestroy()
-    }
-
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         FullScreenHelper.setFullScreenOnWindowFocusChanged(this, hasFocus)
