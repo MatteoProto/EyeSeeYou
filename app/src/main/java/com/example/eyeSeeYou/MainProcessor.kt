@@ -2,6 +2,7 @@ package com.example.eyeSeeYou
 
 import android.media.Image
 import android.util.Log
+import com.example.eyeSeeYou.helpers.VoiceMessage
 import com.example.eyeSeeYou.helpers.Zones
 import com.google.ar.core.Frame
 import com.google.ar.core.SemanticLabel
@@ -15,59 +16,81 @@ class MainProcessor {
 
     private val history: ArrayDeque<Map<SemanticLabel, Set<Zones>>> = ArrayDeque()
 
-    private lateinit var output: String
-
-    fun processFrame(frame: Frame, semanticImage: Image?, depthImage: Image?): String {
+    fun processFrame(frame: Frame, semanticImage: Image?, depthImage: Image?): VoiceMessage? {
         try {
             val start = System.currentTimeMillis()
             val semantic = semanticImage ?: frame.acquireSemanticImage()
             val depth = depthImage ?: frame.acquireDepthImage16Bits()
 
+            /** Compute obstacles */
             val labelsPosition = identifier.identify(semantic, depth)
-            if (history.size >= 5) {
+            if (history.size >= 3) {
                 history.removeFirst()
             }
             history.addLast(labelsPosition)
-            val cuteLabels = computeStableLabelPosition(history)
+            val (_,labelMap) = identifier.computeStableZoneLabels(history)
 
-            output = ""
-            for ((label, zones) in cuteLabels) {
-                output =(output + "  Label: $label → Zones: ${zones.joinToString()} \n")
-            }
+            /** Compute steps */
+            //Parte di leo
 
-
-            ////Log.d("OUTPUT", output)
-            Log.d("TIME", "${System.currentTimeMillis() - start}")
             semantic.close()
             depth.close()
+
+            val output = computeIndication(labelMap)
+            Log.d("TIME", "${System.currentTimeMillis() - start}")
+
             return output
         } catch (e: NotYetAvailableException) {
             // Images still not ready
-            return ""
+            return null
         }
     }
 
-    private fun computeStableLabelPosition(
-        history: Collection<Map<SemanticLabel, Set<Zones>>>,
-        minOccurrences: Int = 3
-    ): MutableMap<SemanticLabel, Set<Zones>> {
-        val labelOccurrences = mutableMapOf<SemanticLabel, Int>()
-        val labelZones = mutableMapOf<SemanticLabel, MutableSet<Zones>>()
+    private fun computeIndication(map: Map<Zones, Boolean>): VoiceMessage? {
+        val left = map[Zones.LEFT] == true
+        val right = map[Zones.RIGHT] == true
+        val center = map[Zones.CENTER] == true
+        val high = map[Zones.HIGH] == true
+        val low = map[Zones.LOW] == true
+        val leftWall = map[Zones.LEFT_WALL] == true
+        val rightWall = map[Zones.RIGHT_WALL] == true
 
-        for (frameMap in history) {
-            for ((label, zones) in frameMap) {
-                labelOccurrences[label] = labelOccurrences.getOrDefault(label, 0) + 1
-                labelZones.getOrPut(label) { mutableSetOf() }.addAll(zones)
-            }
+        return when {
+            left && right && center && leftWall && rightWall -> VoiceMessage.WARNING_OBSTACLE_STOP
+            left && right && high && leftWall && rightWall -> VoiceMessage.WARNING_OBSTACLE_STOP
+            left && right && low && leftWall && rightWall -> VoiceMessage.WARNING_OBSTACLE_STOP
+
+            left && right && center && leftWall -> VoiceMessage.WARNING_OBSTACLE_LEFT_HUGE
+            left && right && high && leftWall -> VoiceMessage.WARNING_OBSTACLE_LEFT_HUGE
+            left && right && low && leftWall -> VoiceMessage.WARNING_OBSTACLE_LEFT_HUGE
+
+            left && right && center && rightWall -> VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE
+            left && right && high && rightWall -> VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE
+            left && right && low && rightWall -> VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE
+
+            left && right && center -> VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE
+            left && right && high -> VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE
+            left && right && low -> VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE
+
+            center && right -> VoiceMessage.WARNING_OBSTACLE_RIGHT_BIG
+            high && right -> VoiceMessage.WARNING_OBSTACLE_RIGHT_BIG
+            low && right -> VoiceMessage.WARNING_OBSTACLE_RIGHT_BIG
+
+            center && left -> VoiceMessage.WARNING_OBSTACLE_LEFT_BIG
+            high && left -> VoiceMessage.WARNING_OBSTACLE_LEFT_BIG
+            low && left -> VoiceMessage.WARNING_OBSTACLE_LEFT_BIG
+
+            left && right -> VoiceMessage.WARNING_OBSTACLE_NARROW
+
+            center -> VoiceMessage.WARNING_OBSTACLE_CENTER
+            right -> VoiceMessage.WARNING_OBSTACLE_RIGHT
+            left -> VoiceMessage.WARNING_OBSTACLE_LEFT
+            high -> VoiceMessage.WARNING_OBSTACLE_HIGH
+            low -> VoiceMessage.WARNING_OBSTACLE_LOW
+
+            /** Mancano i casi degli scalini */
+
+            else -> null
         }
-
-        val stableLabelsPosition = mutableMapOf<SemanticLabel, Set<Zones>>()
-        for ((label, count) in labelOccurrences) {
-            if (count >= minOccurrences) {
-                stableLabelsPosition[label] = labelZones[label] ?: emptySet()
-            }
-        }
-
-        return stableLabelsPosition
     }
 }

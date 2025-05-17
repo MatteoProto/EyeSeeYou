@@ -28,7 +28,11 @@ import java.io.IOException
 import java.nio.ByteBuffer
 
 /** Renders the HelloAR application using google example Renderer. */
-class MainRenderer(val activity: MainActivity, private val processor: MainProcessor) :
+class MainRenderer(
+    val activity: MainActivity,
+    private val processor: MainProcessor,
+    vocalAssistant: VocalAssistant
+) :
     SampleRender.Renderer, DefaultLifecycleObserver {
     companion object {
         const val TAG = "HelloArRenderer"
@@ -217,9 +221,15 @@ class MainRenderer(val activity: MainActivity, private val processor: MainProces
             activity.view.snackbarHelper.hide(activity)
         } else if (camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_LIGHT || camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_FEATURES) {
             activity.view.snackbarHelper.showMessage(activity, message)
-            (activity as? MainActivity)?.setTorch(true, session)
+            activity.setTorch(true, session)
+        } else if (output == null) {
+            activity.view.snackbarHelper.hide(activity)
         } else {
-            activity.view.snackbarHelper.showMessage(activity, output)
+            //Text to Speech
+            activity.vocalAssistant.playMessage(output)
+            /**Vibration*/
+
+            activity.view.snackbarHelper.showMessage(activity, output.toString())
         }
         image?.close()
     }

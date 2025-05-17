@@ -5,6 +5,7 @@ import com.example.eyeSeeYou.MainProcessor.PointData
 import com.example.eyeSeeYou.helpers.Zones
 import com.google.ar.core.SemanticLabel
 import java.nio.ByteOrder
+import kotlin.collections.containsKey
 
 class Identifier {
 
@@ -21,7 +22,7 @@ class Identifier {
     private fun findLabel(byte: Byte): SemanticLabel {
         return when (byte.toInt()) {
             1 -> SemanticLabel.SKY
-            2 -> SemanticLabel.BUILDING
+            // 2 -> SemanticLabel.BUILDING
             3 -> SemanticLabel.TREE
             4 -> SemanticLabel.ROAD
             5 -> SemanticLabel.SIDEWALK
@@ -39,7 +40,7 @@ class Identifier {
     private fun assignLabeledPoints(
         semanticImage: Image,
         depthImage: Image,
-        maxDistanceMeters: Float = 3.0f
+        maxDistanceMeters: Float = 3.5f
     ): Map<SemanticLabel, MutableList<PointData>> {
         val labeledPoints = mutableMapOf<SemanticLabel, MutableList<PointData>>()
 
@@ -84,7 +85,7 @@ class Identifier {
         labeledPoints: Map<SemanticLabel, List<PointData>>,
         height: Int,
         width: Int,
-        maxDistanceMeters: Float = 1.0f
+        maxDistanceMeters: Float = 2.0f
     ): Set<SemanticLabel> {
 
         val nearbyLabels = mutableSetOf<SemanticLabel>()
@@ -110,8 +111,6 @@ class Identifier {
 
         return nearbyLabels
     }
-
-
 
     private fun computeZonesForLabels(
         nearObjects: Set<SemanticLabel>,
@@ -196,33 +195,33 @@ class Identifier {
                     // Wall extremes
                     y < rightExtreme -> {
                         if (!hasWallLeft) {
-                            zones.add(Zones.LEFT_WALL)
+                            zones.add(Zones.RIGHT_WALL)
                             hasWallLeft = true
                         }
                     }
 
                     y > leftExtreme -> {
                         if (!hasWallRight) {
-                            zones.add(Zones.RIGHT_WALL)
+                            zones.add(Zones.LEFT_WALL)
                             hasWallRight = true
                         }
                     }
 
                     // Transitional areas
                     y in (rightMedium..rightCenter) && x in (medium..low) -> {
-                        hasLeftCenter = true
-                    }
-
-                    y in (leftCenter..leftMedium) && x in (medium..low) -> {
                         hasRightCenter = true
                     }
 
+                    y in (leftCenter..leftMedium) && x in (medium..low) -> {
+                        hasLeftCenter = true
+                    }
+
                     y in (rightExtreme..rightMedium) && x >= low -> {
-                        hasLeftLow = true
+                        hasRightLow = true
                     }
 
                     y in (leftMedium..leftExtreme) && x >= low -> {
-                        hasRightLow = true
+                        hasLeftLow = true
                     }
                 }
             }
@@ -239,4 +238,61 @@ class Identifier {
 
         return zoneMap
     }
+
+    fun computeStableZoneLabels(
+        history: Collection<Map<SemanticLabel, Set<Zones>>>,
+        minOccurrences: Int = 2
+    ): Pair<Map<Zones, Set<SemanticLabel>>, Map<Zones, Boolean>> {
+        val labelOccurrences = mutableMapOf<SemanticLabel, Int>()
+        val labelZones = mutableMapOf<SemanticLabel, MutableSet<Zones>>()
+
+        for (frameMap in history) {
+            for ((label, zones) in frameMap) {
+                labelOccurrences[label] = labelOccurrences.getOrDefault(label, 0) + 1
+                labelZones.getOrPut(label) { mutableSetOf() }.addAll(zones)
+            }
+        }
+
+        val stableZoneLabels = mutableMapOf<Zones, MutableSet<SemanticLabel>>()
+        for ((label, count) in labelOccurrences) {
+            if (count >= minOccurrences) {
+                val zones = labelZones[label] ?: continue
+                for (zone in zones) {
+                    stableZoneLabels.getOrPut(zone) { mutableSetOf() }.add(label)
+                }
+            }
+        }
+
+        val zoneOccupancy = mutableMapOf<Zones, Boolean>()
+        for (zone in Zones.entries) {
+            zoneOccupancy[zone] = stableZoneLabels.containsKey(zone)
+        }
+
+        return stableZoneLabels to zoneOccupancy
+    }
+
+    fun computeStableLabelPosition(
+        history: Collection<Map<SemanticLabel, Set<Zones>>>,
+        minOccurrences: Int = 2
+    ): MutableMap<SemanticLabel, Set<Zones>> {
+        val labelOccurrences = mutableMapOf<SemanticLabel, Int>()
+        val labelZones = mutableMapOf<SemanticLabel, MutableSet<Zones>>()
+
+        for (frameMap in history) {
+            for ((label, zones) in frameMap) {
+                labelOccurrences[label] = labelOccurrences.getOrDefault(label, 0) + 1
+                labelZones.getOrPut(label) { mutableSetOf() }.addAll(zones)
+            }
+        }
+
+        val stableLabelsPosition = mutableMapOf<SemanticLabel, Set<Zones>>()
+        for ((label, count) in labelOccurrences) {
+            if (count >= minOccurrences) {
+                stableLabelsPosition[label] = labelZones[label] ?: emptySet()
+            }
+        }
+
+        return stableLabelsPosition
+    }
+
 }

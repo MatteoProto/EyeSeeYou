@@ -60,7 +60,7 @@ class SampleRender(
                     renderer.onDrawFrame(this@SampleRender)
                 }
             })
-        glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+        glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
         glSurfaceView.setWillNotDraw(false)
     }
 
