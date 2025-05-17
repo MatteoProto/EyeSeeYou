@@ -29,6 +29,8 @@
     <string name="obstacle_horizontal">ostacolo %1$s</string>
     <string name="obstacle_center">ostacolo davanti</string>
 
+    <string name="voice_help">Help Vocale</string>
+
     <string name="error_install_ar">Installa Google Play Services for AR</string>
     <string name="error_update_arcore">Aggiorna ARCore</string>
     <string name="error_update_app">Aggiorna app</string>

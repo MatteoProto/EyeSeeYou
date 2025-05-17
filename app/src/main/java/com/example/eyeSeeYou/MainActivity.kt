@@ -2,6 +2,7 @@ package com.example.eyeSeeYou
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -10,10 +11,13 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.MotionEvent
+import android.widget.Button
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.example.eyeSeeYou.samplerender.SampleRender
 import com.example.eyeSeeYou.theme.EyeSeeYouTheme
 import com.google.ar.core.Config
@@ -45,6 +49,8 @@ class MainActivity : AppCompatActivity() {
     lateinit var preferencesManager: PreferencesManager
     lateinit var vocalAssistant : VocalAssistant
     lateinit var vibrationManager : VibrationManager
+    private val REQUEST_RECORD_AUDIO_PERMISSION = 101
+
 
     val depthSettings = DepthSettings()
     val eisSettings = EisSettings()
@@ -93,6 +99,14 @@ class MainActivity : AppCompatActivity() {
             preferencesManager.setPreferredLanguage(systemLocale)
         }
 
+        //Imposta il layout XML con il bottone
+        setContentView(R.layout.activity_main)
+
+        //Inizializza VocalAssistant e VibrationManager
+        vocalAssistant = VocalAssistant(this, preferencesManager)
+        vibrationManager = VibrationManager(this, preferencesManager)
+
+        //Inizializza SpeechRecognizer e intent
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -102,7 +116,8 @@ class MainActivity : AppCompatActivity() {
 
         speechRecognizer.setRecognitionListener(object : RecognitionListener {
             override fun onResults(results: Bundle) {
-                val spokenText = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.get(0)?.lowercase() ?: return
+                val spokenText = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.get(0)?.lowercase() ?: return
                 handleVoiceCommand(spokenText)
             }
 
@@ -116,45 +131,50 @@ class MainActivity : AppCompatActivity() {
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
 
-        screenHeight = resources.displayMetrics.heightPixels
-
-        vocalAssistant = VocalAssistant(this, preferencesManager)
-        vibrationManager = VibrationManager(this, preferencesManager)
-
-        // UI con Jetpack Compose
-        setContent {
-            EyeSeeYouTheme {
-                MainScreen(vocalAssistant)
+        //Setup bottone per avviare riconoscimento vocale
+        val btnTranscribe = findViewById<Button>(R.id.btn_transcribe)
+        btnTranscribe.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                startListening()
+            } else {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.RECORD_AUDIO),
+                    REQUEST_RECORD_AUDIO_PERMISSION
+                )
             }
         }
+
+        screenHeight = resources.displayMetrics.heightPixels
 
         if (preferencesManager.isTTSEnabled()) {
             vocalAssistant.playMessage(MessageType.WELCOME)
         }
 
-        //SETUP ARCore
+        //Setup ARCore
         setupARCore()
     }
 
     private fun setupARCore() {
-        arCoreSessionHelper = ARCoreSessionLifecycleHelper(this)
-        arCoreSessionHelper.exceptionCallback = { exception ->
-             val message = when (exception) {
-                 is UnavailableUserDeclinedInstallationException -> getString(R.string.error_install_ar)
-                 is UnavailableApkTooOldException -> getString(R.string.error_update_arcore)
-                 is UnavailableSdkTooOldException -> getString(R.string.error_update_app)
-                 is UnavailableDeviceNotCompatibleException -> getString(R.string.error_not_compatible)
-                 is CameraNotAvailableException -> getString(R.string.error_camera_unavailable)
-                 else -> getString(R.string.error_generic, exception.localizedMessage ?: "Errore sconosciuto")
-             }
+        arCoreSessionHelper = ARCoreSessionLifecycleHelper(this).apply {
+            exceptionCallback = { exception ->
+                val message = when (exception) {
+                    is UnavailableUserDeclinedInstallationException -> getString(R.string.error_install_ar)
+                    is UnavailableApkTooOldException -> getString(R.string.error_update_arcore)
+                    is UnavailableSdkTooOldException -> getString(R.string.error_update_app)
+                    is UnavailableDeviceNotCompatibleException -> getString(R.string.error_not_compatible)
+                    is CameraNotAvailableException -> getString(R.string.error_camera_unavailable)
+                    else -> getString(R.string.error_generic, exception.localizedMessage ?: "Errore sconosciuto")
+                }
 
-             Log.e(TAG, "ARCore exception", exception)
-             view.snackbarHelper.showError(this, message)
+                Log.e(TAG, "ARCore exception", exception)
+                view.snackbarHelper.showError(this@MainActivity, message)
+            }
+            beforeSessionResume = ::configureSession
         }
-
-        arCoreSessionHelper.beforeSessionResume = ::configureSession
         lifecycle.addObserver(arCoreSessionHelper)
 
+        //Inizializza logica e rendering
         processor = MainProcessor()
         renderer = MainRenderer(this, vocalAssistant, vibrationManager, processor)
         lifecycle.addObserver(renderer)
@@ -165,24 +185,18 @@ class MainActivity : AppCompatActivity() {
 
         SampleRender(view.surfaceView, renderer, assets)
 
+        //Touch invisibile per mettere in pausa/riprendere la sintesi vocale
         view.surfaceView.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP) {
-                val x = event.x
-                val y = event.y
-                val width = view.surfaceView.width
-                val height = view.surfaceView.height
+            if (event.action != MotionEvent.ACTION_UP) return@setOnTouchListener false
 
-                if (x > width * 0.25 && x < width * 0.75 && y > height * 0.25 && y < height * 0.75) {
-                    togglePause()
-                    true
-                }
-                else if (y > height * 0.55f && y < height * 0.85f) {
-                    startListening()
-                    true
-                }
-                else {
-                    false
-                }
+            val x = event.x
+            val y = event.y
+            val width = view.surfaceView.width
+            val height = view.surfaceView.height
+
+            if (x > width * 0.25 && x < width * 0.75 && y > height * 0.25 && y < height * 0.75) {
+                togglePause()
+                true
             } else {
                 false
             }
@@ -268,7 +282,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startListening() {
-        speechRecognizer.startListening(recognizerIntent)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            speechRecognizer.startListening(recognizerIntent)
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO_PERMISSION)
+        }
     }
 
     private fun handleVoiceCommand(command: String) {
@@ -339,6 +357,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         vocalAssistant.shutdown()
+        speechRecognizer.destroy()
         super.onDestroy()
     }
 
