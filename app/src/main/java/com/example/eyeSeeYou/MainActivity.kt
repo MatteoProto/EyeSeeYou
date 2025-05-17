@@ -1,16 +1,20 @@
 package com.example.eyeSeeYou
 
+import android.Manifest
 import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.MotionEvent
 import android.widget.Toast
+import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import com.example.eyeSeeYou.helpers.CameraPermissionHelper
 import com.example.eyeSeeYou.helpers.DepthSettings
 import com.example.eyeSeeYou.helpers.EisSettings
 import com.example.eyeSeeYou.helpers.FullScreenHelper
+import com.example.eyeSeeYou.helpers.VoiceMessage
 import com.example.eyeSeeYou.samplerender.SampleRender
 import com.google.ar.core.CameraConfig.TargetFps
 import com.google.ar.core.CameraConfigFilter
@@ -38,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var renderRunnable: Runnable
     lateinit var preferencesManager: PreferencesManager
     lateinit var vocalAssistant: VocalAssistant
+    private lateinit var vibrationManager: VibrationManager
 
     val depthSettings = DepthSettings()
     private val eisSettings = EisSettings()
@@ -48,7 +53,16 @@ class MainActivity : AppCompatActivity() {
     private val renderHandler = Handler(Looper.getMainLooper())
     private val desiredFps = 30L
 
+    private var y1 = 0f
+    private var y2 = 0f
+    private var x1 = 0f
+    private var x2 = 0f
+    val SWIPE_THRESHOLD = 150
 
+    private var isARCoreManuallyPaused = false
+
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupARCore()
@@ -98,10 +112,26 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (view.surfaceView.renderMode == GLSurfaceView.RENDERMODE_WHEN_DIRTY) {
-            Log.d(TAG, "onResume: Starting periodic render requests.")
-            renderHandler.post(renderRunnable)
+        if (isARCoreManuallyPaused) {
+            arCoreSessionHelper.session?.let {
+                try {
+                    it.pause()
+                    Log.d(TAG, "ARCore session re-paused in onResume due to isARCoreManuallyPaused flag.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error re-pausing ARCore session in onResume", e)
+                }
+            }
+            renderHandler.removeCallbacks(renderRunnable)
+            view.showArPausedImage(true)
+        } else {
+            view.showArPausedImage(false)
+            if (view.surfaceView.renderMode == GLSurfaceView.RENDERMODE_WHEN_DIRTY) {
+                Log.d(TAG, "onResume: Starting periodic render requests for non-manually-paused ARCore.")
+                renderHandler.post(renderRunnable)
+            }
+            view.surfaceView.requestRender()
         }
+
     }
 
     override fun onPause() {
@@ -191,6 +221,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         vocalAssistant = VocalAssistant(this, preferencesManager)
+        vibrationManager = VibrationManager(this, preferencesManager)
 
         arCoreSessionHelper.exceptionCallback =
             { exception ->
@@ -233,6 +264,110 @@ class MainActivity : AppCompatActivity() {
                     view.surfaceView.requestRender()
                 }
                 renderHandler.postDelayed(this, 1000L / desiredFps)
+            }
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                x1 = event.x
+                y1 = event.y
+            }
+            MotionEvent.ACTION_UP -> {
+                x2 = event.x
+                y2 = event.y
+
+                val deltaX = x2 - x1
+                val deltaY = y2 - y1
+
+                if (kotlin.math.abs(deltaX) > kotlin.math.abs(deltaY)) {
+                    if (deltaX > SWIPE_THRESHOLD) {
+                        toggleARCore()
+                    } else if (deltaX < -SWIPE_THRESHOLD) {
+                        togglePhoneVibration()
+                    }
+                } else {
+                    if (deltaY > SWIPE_THRESHOLD) {
+                        toggleWatchVibration()
+                    } else if (deltaY < -SWIPE_THRESHOLD) {
+                        toggleTTS()
+                    }
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    private fun toggleTTS() {
+        val newValue = !preferencesManager.isTTSEnabled()
+        preferencesManager.setTTSEnabled(newValue)
+        vibrationManager.shortVibration(force = true)
+
+        val type = if (newValue) VoiceMessage.TTS_ENABLED else VoiceMessage.TTS_DISABLED
+        vocalAssistant.playMessage(type, force = true)
+    }
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    private fun toggleWatchVibration() {
+        val newValue = !preferencesManager.isWatchVibrationActive()
+        preferencesManager.setWatchVibrationActive(newValue)
+        vibrationManager.longVibration()
+
+        val type = if (newValue) VoiceMessage.VIBRATION_ENABLED else VoiceMessage.VIBRATION_DISABLED
+        vocalAssistant.playMessage(type, force = true)
+    }
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    private fun togglePhoneVibration() {
+        val newValue = !preferencesManager.isPhoneVibrationEnabled()
+        preferencesManager.setPhoneVibrationEnabled(newValue)
+        vibrationManager.longVibration()
+
+        val type = if (newValue) VoiceMessage.VIBRATION_ENABLED else VoiceMessage.VIBRATION_DISABLED
+        vocalAssistant.playMessage(type, force = true)
+    }
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    private fun toggleARCore() {
+        vibrationManager.shortVibration(force = true)
+        val session = arCoreSessionHelper.session
+
+        if (session == null) {
+            Log.w(TAG, "ARCore session is null, cannot toggle.")
+            // Potresti voler informare l'utente che ARCore non è pronto
+            vocalAssistant.playMessage(VoiceMessage.WARNING, force = true) // O un messaggio più specifico
+            return
+        }
+
+        if (!isARCoreManuallyPaused) {
+            try {
+                session.pause()
+                isARCoreManuallyPaused = true
+                renderHandler.removeCallbacks(renderRunnable)
+                view.showArPausedImage(true)
+                Log.d(TAG, "ARCore session MANUALLY PAUSED via toggle.")
+                vocalAssistant.playMessage(VoiceMessage.PAUSE, force = true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error pausing ARCore session via toggle", e)
+            }
+        } else {
+            try {
+                configureSession(session)
+                configureTorch(session)
+                view.showArPausedImage(false)
+                session.resume()
+                isARCoreManuallyPaused = false
+                if (view.surfaceView.renderMode == GLSurfaceView.RENDERMODE_WHEN_DIRTY) {
+                    renderHandler.post(renderRunnable)
+                }
+                Log.d(TAG, "ARCore session MANUALLY RESUMED via toggle.")
+                vocalAssistant.playMessage(VoiceMessage.RESUME, force = true)
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error resuming ARCore session via toggle", e)
             }
         }
     }
