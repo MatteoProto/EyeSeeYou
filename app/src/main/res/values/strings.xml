@@ -45,6 +45,8 @@
   <string name="warning_obstacle_left_huge">Warning, very large obstacle on your left.</string>
   <string name="warning_obstacle_right_huge">Warning, very large obstacle on your right.</string>
   <string name="warning_obstacle_stop">Warning, stop immediately.</string>
+  <string name="warning_almost_on_a_step">Warning, almonst on a step.</string>
+  <string name="warning_pit">Warning, pit ahead.</string>
 
   <string name="vertical_low">low</string>
   <string name="vertical_high">high</string>
