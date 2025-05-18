@@ -242,7 +242,7 @@ class Identifier {
     fun computeStableZoneLabels(
         history: Collection<Map<SemanticLabel, Set<Zones>>>,
         minOccurrences: Int = 2
-    ): Pair<Map<Zones, Set<SemanticLabel>>, Map<Zones, Boolean>> {
+    ): Pair<Map<Zones, Set<SemanticLabel>>, MutableMap<Zones, Boolean>> {
         val labelOccurrences = mutableMapOf<SemanticLabel, Int>()
         val labelZones = mutableMapOf<SemanticLabel, MutableSet<Zones>>()
 

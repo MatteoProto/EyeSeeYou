@@ -25,5 +25,8 @@ enum class VoiceMessage(@StringRes val resId: Int) {
     WARNING_OBSTACLE_NARROW(R.string.warning_obstacle_narrow),
     WARNING_OBSTACLE_LEFT_HUGE(R.string.warning_obstacle_left_huge),
     WARNING_OBSTACLE_RIGHT_HUGE(R.string.warning_obstacle_right_huge),
-    WARNING_OBSTACLE_STOP(R.string.warning_obstacle_stop)
+    WARNING_OBSTACLE_STOP(R.string.warning_obstacle_stop),
+
+    WARNING_ALMOST_ON_STEP(R.string.warning_almost_on_a_step),
+    WARNING_STEP_PIT(R.string.warning_pit),
 }

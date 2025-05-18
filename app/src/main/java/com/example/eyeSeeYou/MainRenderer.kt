@@ -53,13 +53,6 @@ class MainRenderer(
     private var showSemanticImage = false
     private var hasSetTextureNames = false
 
-    // Step up/down counters
-    private var stepUp = 0
-    private var stepDown = 0
-
-    // Lista per memorizzare le coordinate dei punti dello schermo
-    private val screenGridPoints = mutableMapOf<String, Point2D>()
-
     // Point Cloud
     private lateinit var pointCloudVertexBuffer: VertexBuffer
     private lateinit var pointCloudMesh: Mesh
@@ -77,14 +70,6 @@ class MainRenderer(
 
     private val displayRotationHelper = DisplayRotationHelper(activity)
     private val trackingStateHelper = TrackingStateHelper(activity)
-
-    fun setScreenGridPoints(points: Map<String, Point2D>) {
-        //synchronized(pointsLock) {
-        screenGridPoints.clear()
-        screenGridPoints.putAll(points)
-        Log.d("MainRenderer", "Ricevute ${points.size} coordinate di punti.")
-        //}
-    }
 
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
@@ -256,41 +241,6 @@ class MainRenderer(
             activity.view.snackbarHelper.showMessage(activity, output.toString())
         }
 
-        //Process per gradini---------------------------------------------------------------------------
-        val res = processor.processStep(frame, screenGridPoints)
-        val drop = res[0]       //dislivello
-        var distance = res[1] // distanza dal dislivello
-        val distanceFromCloserStep = res[2]
-        val type = res[3]
-        distance = abs(distance)*100
-
-        if( distanceFromCloserStep >= 0f && distanceFromCloserStep < 0.3f ){
-            activity.view.snackbarHelper.showMessage(activity, "SEI QUASI SU UNO SCALINO!!!")
-        }
-
-        if( type == -1f ){
-            // È stata rilevata una BUCA
-            if( distance <= 100 ){ // Prossimità della buca rilevata ora
-                activity.view.snackbarHelper.showMessage(activity, "PIT at $distance centimeters")
-            }
-        } else if (type == 1f){
-            // È stato rilevato uno SCALINO
-            if( drop > 0 ){ // Determina se UP o DOWN usando il dislivello originale
-                stepDown = 0
-                stepUp++
-                if( distance <= 1.2 || stepUp >= 3 ){
-                    activity.view.snackbarHelper.showMessage(activity, "STEP UP ${abs(drop)} at $distance centimeters")
-                    stepUp = 0
-                }
-            } else {
-                stepUp = 0
-                stepDown++
-                if( distance <= 1.2 || stepDown >= 3 ){
-                    activity.view.snackbarHelper.showMessage(activity, "STEP DOWN ${abs(drop)} at $distance centimeters")
-                    stepDown = 0
-                }
-            }
-        }
         image?.close()
     }
 

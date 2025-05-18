@@ -28,6 +28,8 @@
     <string name="warning_obstacle_left_huge">Attenzione, ostacolo molto grande a sinistra.</string>
     <string name="warning_obstacle_right_huge">Attenzione, ostacolo molto grande a destra.</string>
     <string name="warning_obstacle_stop">Attenzione, fermati immediatamente.</string>
+    <string name="warning_almost_on_a_step">Attenzione, sei quasi su uno scalino.</string>
+    <string name="warning_pit">Attenzione, buca davanti a te.</string>
 
     <string name="vertical_low">basso</string>
     <string name="vertical_high">alto</string>

@@ -44,16 +44,23 @@ class VocalAssistant(private val context: Context, private val preferencesManage
     fun speak(text: String, force: Boolean = false) {
         val now = System.currentTimeMillis()
 
-        if (!force /*&& text == lastMessage*/ && now - lastMessageTime < MIN_DELAY_MS) {
-            //Ignored message
+        if (!force && now - lastMessageTime < MIN_DELAY_MS) {
             return
         }
 
         if ((preferencesManager.isTTSEnabled() || force) && isReady) {
+            // Imposta la lingua del TTS in base alla lingua corrente del telefono/app
+            val locale = context.resources.configuration.locales[0]  // Locale corrente
+            val result = tts?.setLanguage(locale)
+
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("VocalAssistant", "Lingua non supportata dal TTS: $locale")
+            }
+
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
             lastMessage = text
             lastMessageTime = now
-            Log.d("VocalAssistant", "Parlato: $text")
+            Log.d("VocalAssistant", "Parlato: $text con lingua $locale")
         } else if (!isReady) {
             Log.e("VocalAssistant", "TTS non pronto.")
         }

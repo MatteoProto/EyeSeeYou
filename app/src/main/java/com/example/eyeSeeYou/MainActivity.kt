@@ -109,8 +109,8 @@ class MainActivity : AppCompatActivity() {
         gridContainer.post {
             getImageViewCoordinates() // Prende le coordinate delle image view e le normalizza
             // Passa una copia della lista per evitare problemi di concorrenza se il renderer la modifica
-            renderer.setScreenGridPoints(screenCoordinates)
-            Log.d("MainActivity", "Coordinate dei punti inviate al renderer: $screenCoordinates")
+            processor.setScreenGridPoints(screenCoordinates)
+            Log.d("MainActivity", "Coordinate dei punti inviate al processor: $screenCoordinates")
         }
 
     }
