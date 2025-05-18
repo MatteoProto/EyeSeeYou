@@ -1,15 +1,22 @@
 package com.example.eyeSeeYou
 
 import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.MotionEvent
 import android.widget.Toast
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.example.eyeSeeYou.helpers.CameraPermissionHelper
 import com.example.eyeSeeYou.helpers.DepthSettings
 import com.example.eyeSeeYou.helpers.EisSettings
@@ -42,7 +49,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var renderRunnable: Runnable
     lateinit var preferencesManager: PreferencesManager
     lateinit var vocalAssistant: VocalAssistant
-    private lateinit var vibrationManager: VibrationManager
+    lateinit var vibrationManager: VibrationManager
+    private lateinit var speechRecognizer: SpeechRecognizer
+    private lateinit var speechIntent: Intent
 
     val depthSettings = DepthSettings()
     private val eisSettings = EisSettings()
@@ -66,6 +75,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupARCore()
+        setupVoiceCommandListener()
     }
 
     fun configureSession(session: Session) {
@@ -112,6 +122,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        speechRecognizer.startListening(speechIntent)
         if (isARCoreManuallyPaused) {
             arCoreSessionHelper.session?.let {
                 try {
@@ -142,6 +153,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         vocalAssistant.shutdown()
+        speechRecognizer.destroy()
         super.onDestroy()
     }
 
@@ -202,8 +214,12 @@ class MainActivity : AppCompatActivity() {
                 // Permission denied with checking "Do not ask again".
                 CameraPermissionHelper.launchPermissionSettings(this)
             }
-            finish()
         }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            setupVoiceCommandListener()
+        }
+        finish()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -337,8 +353,7 @@ class MainActivity : AppCompatActivity() {
 
         if (session == null) {
             Log.w(TAG, "ARCore session is null, cannot toggle.")
-            // Potresti voler informare l'utente che ARCore non è pronto
-            vocalAssistant.playMessage(VoiceMessage.WARNING, force = true) // O un messaggio più specifico
+            vocalAssistant.playMessage(VoiceMessage.WARNING, force = true)
             return
         }
 
@@ -371,4 +386,50 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun setupVoiceCommandListener() {
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        speechIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1001)
+        }
+
+        speechRecognizer.setRecognitionListener(object : RecognitionListener {
+            @RequiresPermission(Manifest.permission.VIBRATE)
+            override fun onResults(results: Bundle?) {
+                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                val command = matches?.firstOrNull()?.uppercase(Locale.getDefault()) ?: return
+
+                when {
+                    "START" in command -> toggleARCore()
+                    "STOP" in command -> toggleARCore()
+                    "VIBRATION" in command -> togglePhoneVibration()
+                    "VIBRATION WATCH" in command -> toggleWatchVibration()
+                    "SPEECH" in command -> toggleTTS()
+                }
+
+                // Restart listener
+                speechRecognizer.startListening(intent)
+            }
+
+            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onError(error: Int) {
+                // Restart on error
+                speechRecognizer.startListening(intent)
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+
+        speechRecognizer.startListening(intent)
+    }
+
 }

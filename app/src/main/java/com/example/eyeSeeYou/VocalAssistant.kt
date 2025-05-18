@@ -14,7 +14,7 @@ class VocalAssistant(private val context: Context, private val preferencesManage
 
     private var lastMessage: String? = null
     private var lastMessageTime: Long = 0
-    private val MIN_DELAY_MS = 3000L
+    private val MIN_DELAY_MS = 2500L
 
     init {
         tts = TextToSpeech(context, this)

@@ -20,6 +20,7 @@
 
     <uses-permission android:name="android.permission.CAMERA"/>
     <!-- Required to post notifications for Android T+ devices -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Google Play assumes that certain hardware related permissions indicate that the underlying

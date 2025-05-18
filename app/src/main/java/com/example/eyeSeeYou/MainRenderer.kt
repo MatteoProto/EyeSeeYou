@@ -1,8 +1,10 @@
 package com.example.eyeSeeYou
 
+import android.Manifest
 import android.media.Image
 import android.opengl.GLES30
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.eyeSeeYou.helpers.DisplayRotationHelper
@@ -157,6 +159,7 @@ class MainRenderer(
     }
 
     /** Group of functions executed for each frame. */
+    @RequiresPermission(Manifest.permission.VIBRATE)
     override fun onDrawFrame(render: SampleRender) {
         val session = session ?: return
         this.render = render
@@ -225,9 +228,9 @@ class MainRenderer(
         } else if (output == null) {
             activity.view.snackbarHelper.hide(activity)
         } else {
-            //Text to Speech
+
             activity.vocalAssistant.playMessage(output)
-            /**Vibration*/
+            activity.vibrationManager.shortVibration()
 
             activity.view.snackbarHelper.showMessage(activity, output.toString())
         }
