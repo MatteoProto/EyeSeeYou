@@ -225,7 +225,7 @@ class MainRenderer(
         } else if (output == null) {
             activity.view.snackbarHelper.hide(activity)
         } else {
-            //Text to Speech
+            //TEXT TO SPEECH
             activity.vocalAssistant.playMessage(output)
             /**Vibration*/
 

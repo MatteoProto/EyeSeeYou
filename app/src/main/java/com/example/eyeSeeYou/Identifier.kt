@@ -18,7 +18,6 @@ class Identifier {
         return labelsPosition
     }
 
-
     private fun findLabel(byte: Byte): SemanticLabel {
         return when (byte.toInt()) {
             1 -> SemanticLabel.SKY
