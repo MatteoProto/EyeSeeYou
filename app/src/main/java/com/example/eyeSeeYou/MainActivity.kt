@@ -12,6 +12,8 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.MotionEvent
+import android.view.View
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
@@ -41,6 +43,20 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
+    // Grid point for step detection------------------------------------------------------
+    private val gridPointImageViews = mutableListOf<ImageView>()
+    private val screenCoordinates = mutableMapOf<String, Point2D>()
+    // Definisci gli ID degli ImageView della griglia
+    private val gridPointIds = listOf(
+        R.id.point11, R.id.point12, R.id.point13, R.id.point14,
+        R.id.point21, R.id.point22, R.id.point23, R.id.point24,
+        R.id.point31, R.id.point32, R.id.point33, R.id.point34
+    )
+    //---------------------------------------------------------------------------------
+
+    // Display info
+    var screenWidth: Float = 0f
+    var screenHeight: Float = 0f
 
     lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
     lateinit var view: MainView
@@ -76,6 +92,48 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setupARCore()
         setupVoiceCommandListener()
+
+        // Get screen dimension
+        screenWidth = view.surfaceView.width.toFloat()
+        screenHeight = view.surfaceView.width.toFloat()
+
+        // Trova gli ImageView e aggiungili alla lista
+        gridPointIds.forEach { id ->
+            findViewById<ImageView>(id)?.let {
+                gridPointImageViews.add(it)
+            }
+        }
+        // Ottieni le coordinate dopo che il layout è stato completato.
+        // Usiamo il container della griglia per il post, ma qualsiasi vista andrebbe bene.
+        val gridContainer = findViewById<View>(R.id.grid_container)
+        gridContainer.post {
+            getImageViewCoordinates() // Prende le coordinate delle image view e le normalizza
+            // Passa una copia della lista per evitare problemi di concorrenza se il renderer la modifica
+            renderer.setScreenGridPoints(screenCoordinates)
+            Log.d("MainActivity", "Coordinate dei punti inviate al renderer: $screenCoordinates")
+        }
+
+    }
+
+    /**
+    Prende le coordinate sullo schermo delle image view
+     */
+    private fun getImageViewCoordinates() {
+        screenCoordinates.clear()
+        val locationOnScreen = IntArray(2) // Array per memorizzare le coordinate assolute [x, y]
+
+        gridPointImageViews.forEachIndexed { index, imageView ->
+            imageView.getLocationInWindow(locationOnScreen) // Coordinate assolute
+
+            val centerX = locationOnScreen[0]
+            val centerY = locationOnScreen[1]
+
+            // Creo il nuovo punto da aggiungere all'array screenCoordinates
+            val newPoint = Point2D(centerX, centerY)
+            screenCoordinates[resources.getResourceEntryName(imageView.id)] = newPoint
+            //screenCoordinates.add(PointF(centerX, centerY))
+            Log.d("MainActivity", "Punto ${index + 1} (${resources.getResourceEntryName(imageView.id)}): centro ($centerX, $centerY)")
+        }
     }
 
     fun configureSession(session: Session) {

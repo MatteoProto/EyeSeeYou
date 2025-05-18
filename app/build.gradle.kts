@@ -47,5 +47,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    implementation("de.javagl:obj:0.2.1")
+    implementation("de.javagl:obj:0.4.0")   //old: implementation("de.javagl:obj:0.2.1")
 }

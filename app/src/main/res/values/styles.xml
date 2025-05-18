@@ -32,4 +32,11 @@
     <!-- All customizations that are NOT specific to a particular API-level can go here. -->
   </style>
 
+  <style name="GridPointDebug">
+    <item name="android:layout_width">12dp</item>
+    <item name="android:layout_height">12dp</item>
+    <item name="android:src">@android:drawable/presence_invisible</item>
+    <item name="android:background">@android:color/transparent</item>
+  </style>
+
 </resources>
