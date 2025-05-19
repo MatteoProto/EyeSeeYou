@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="EyeSeeYou.wear">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-05-19T15:09:41.552701Z">
+        <DropdownSelection timestamp="2025-05-19T20:48:00.158735700Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=R3CR105EADH" />
@@ -15,10 +15,10 @@
       </SelectionState>
       <SelectionState runConfigName="EyeSeeYou.app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-05-19T15:14:30.166236Z">
+        <DropdownSelection timestamp="2025-05-19T20:48:29.086660600Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=8606X9B270053" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=R3CR105EADH" />
             </handle>
           </Target>
         </DropdownSelection>

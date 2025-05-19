@@ -164,9 +164,6 @@ class MainProcessor {
             left -> VoiceMessage.WARNING_OBSTACLE_LEFT
             high -> VoiceMessage.WARNING_OBSTACLE_HIGH
             low -> VoiceMessage.WARNING_OBSTACLE_LOW
-
-            /** Mancano i casi degli scalini */
-
             else -> null
         }
     }

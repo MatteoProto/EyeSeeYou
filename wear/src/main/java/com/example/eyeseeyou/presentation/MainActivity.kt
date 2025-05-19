@@ -14,12 +14,12 @@ class MainActivity : ComponentActivity(), MessageClient.OnMessageReceivedListene
 
     private var lastVibrationTime: Long = 0
     private var lastMessage: String? = null
-    private val MIN_DELAY_MS = 5000L
+    private val MIN_DELAY_MS = 3500L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Wearable.getMessageClient(this).addListener(this)
-        Log.d("WEAR", "Wearable message listener avviato")
+        Log.d("WEAR", "Wearable message listener started")
     }
 
     override fun onMessageReceived(event: MessageEvent) {
@@ -27,10 +27,10 @@ class MainActivity : ComponentActivity(), MessageClient.OnMessageReceivedListene
         val now = System.currentTimeMillis()
         val vibrator = getSystemService(Vibrator::class.java)
 
-        Log.d("WEAR", "Messaggio ricevuto: $message")
+        Log.d("WEAR", "Message received: $message")
 
         if (vibrator?.hasVibrator() != true) {
-            Log.w("WEAR", "Il dispositivo non supporta la vibrazione.")
+            Log.w("WEAR", "Device doesn't support vibration.")
             return
         }
 
@@ -41,9 +41,9 @@ class MainActivity : ComponentActivity(), MessageClient.OnMessageReceivedListene
             vibrateOnce(vibrator)
             lastMessage = message
             lastVibrationTime = now
-            Log.d("WEAR", "Vibrazione eseguita per: $message")
+            Log.d("WEAR", "Vibration performed for: $message")
         } else {
-            Log.d("WEAR", "Messaggio ignorato per debounce: $message")
+            Log.d("WEAR", "Message ignored: $message")
         }
     }
 
@@ -60,6 +60,6 @@ class MainActivity : ComponentActivity(), MessageClient.OnMessageReceivedListene
     override fun onDestroy() {
         super.onDestroy()
         Wearable.getMessageClient(this).removeListener(this)
-        Log.d("WEAR", "Wearable message listener rimosso")
+        Log.d("WEAR", "Wearable message listener removed")
     }
 }

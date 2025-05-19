@@ -9,7 +9,6 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.eyeSeeYou.helpers.DisplayRotationHelper
 import com.example.eyeSeeYou.helpers.TrackingStateHelper
-import com.example.eyeSeeYou.helpers.VoiceMessage
 import com.example.eyeSeeYou.samplerender.Framebuffer
 import com.example.eyeSeeYou.samplerender.GLError
 import com.example.eyeSeeYou.samplerender.Mesh
@@ -29,13 +28,12 @@ import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.NotYetAvailableException
 import java.io.IOException
 import java.nio.ByteBuffer
-import kotlin.math.abs
 
 /** Renders the HelloAR application using google example Renderer. */
 class MainRenderer(
     val activity: MainActivity,
     private val processor: MainProcessor,
-    vocalAssistant: VocalAssistant
+    vocalAssistant: VocalAssistant,
 ) :
     SampleRender.Renderer, DefaultLifecycleObserver {
     companion object {
@@ -61,10 +59,6 @@ class MainRenderer(
 
     // Environmental HDR
     private lateinit var dfgTexture: Texture
-
-    // Temporary matrix allocated here to reduce number of allocations for each frame.
-    private val viewMatrix = FloatArray(16)
-    private val projectionMatrix = FloatArray(16)
 
     private val session
         get() = activity.arCoreSessionHelper.session
@@ -235,12 +229,9 @@ class MainRenderer(
         } else if (output == null) {
             activity.view.snackbarHelper.hide(activity)
         } else {
-            output.wearableCommand?.let { command -> activity.sendMessageToWearables(command.name.lowercase())
-            }
-
             activity.vocalAssistant.playMessage(output)
+            output.wearableCommand?.let { command -> activity.sendMessageToWearables(command.name.lowercase()) }
             activity.vibrationManager.shortVibration()
-
             activity.view.snackbarHelper.showMessage(activity, output.toString())
         }
 
@@ -297,27 +288,14 @@ class MainRenderer(
 
         trackingStateHelper.updateKeepScreenOnFlag(camera.trackingState)
 
-        // -- Draw background
         if (frame.timestamp != 0L) {
-            // Suppress rendering if the camera did not produce the first frame yet. This is to avoid
-            // drawing possible leftover data from previous sessions if the texture is reused.
+
             backgroundRenderer.drawBackground(render)
         }
-
-        // If not tracking, don't draw 3D objects.
         if (camera.trackingState == TrackingState.PAUSED) {
             return image
         }
 
-        // -- Draw non-occluded virtual objects (planes, point cloud)
-
-        // Get projection matrix.
-        camera.getProjectionMatrix(projectionMatrix, 0, Z_NEAR, Z_FAR)
-
-        // Get camera matrix and draw.
-        camera.getViewMatrix(viewMatrix, 0)
-
-        // Compose the virtual scene with the background.
         backgroundRenderer.drawVirtualScene(render, virtualSceneFramebuffer, Z_NEAR, Z_FAR)
 
         return image

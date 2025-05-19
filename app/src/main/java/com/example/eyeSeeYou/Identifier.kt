@@ -22,6 +22,7 @@ class Identifier {
     private fun findLabel(byte: Byte): SemanticLabel {
         return when (byte.toInt()) {
             1 -> SemanticLabel.SKY
+            /** We advice to disable building for indoor usage*/
             2 -> SemanticLabel.BUILDING
             3 -> SemanticLabel.TREE
             4 -> SemanticLabel.ROAD
@@ -270,29 +271,4 @@ class Identifier {
 
         return stableZoneLabels to zoneOccupancy
     }
-
-    fun computeStableLabelPosition(
-        history: Collection<Map<SemanticLabel, Set<Zones>>>,
-        minOccurrences: Int = 2
-    ): MutableMap<SemanticLabel, Set<Zones>> {
-        val labelOccurrences = mutableMapOf<SemanticLabel, Int>()
-        val labelZones = mutableMapOf<SemanticLabel, MutableSet<Zones>>()
-
-        for (frameMap in history) {
-            for ((label, zones) in frameMap) {
-                labelOccurrences[label] = labelOccurrences.getOrDefault(label, 0) + 1
-                labelZones.getOrPut(label) { mutableSetOf() }.addAll(zones)
-            }
-        }
-
-        val stableLabelsPosition = mutableMapOf<SemanticLabel, Set<Zones>>()
-        for ((label, count) in labelOccurrences) {
-            if (count >= minOccurrences) {
-                stableLabelsPosition[label] = labelZones[label] ?: emptySet()
-            }
-        }
-
-        return stableLabelsPosition
-    }
-
 }

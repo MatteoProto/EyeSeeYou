@@ -2,11 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.eyeseeyou">
 
-    <!-- Permessi necessari -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- Indica che l'app è per dispositivi Wear OS -->
     <uses-feature android:name="android.hardware.type.watch" />
 
     <application
@@ -15,18 +13,14 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
-
-        <!-- Libreria wearable -->
         <uses-library
             android:name="com.google.android.wearable"
             android:required="true" />
-
-        <!-- Se l'app è standalone (non richiede lo smartphone) -->
+        
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
-        <!-- MainActivity (UI principale) -->
         <activity
             android:name="com.example.eyeseeyou.presentation.MainActivity"
             android:exported="true"

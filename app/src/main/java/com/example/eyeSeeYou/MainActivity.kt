@@ -45,6 +45,9 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "MainActivity"
     }
 
+    private var lastSentMessage: Long = 0
+    private val messageDelay = 500L
+
     private val VIBRATE_MESSAGE_PATH = "/vibrate_request"
     private val TAG = "PhoneMainActivity"
 
@@ -96,40 +99,35 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setupARCore()
         setupVoiceCommandListener()
-
-        // Get screen dimension
         screenWidth = view.surfaceView.width.toFloat()
         screenHeight = view.surfaceView.width.toFloat()
-
-        // Trova gli ImageView e aggiungili alla lista
         gridPointIds.forEach { id ->
             findViewById<ImageView>(id)?.let {
                 gridPointImageViews.add(it)
             }
         }
-        // Ottieni le coordinate dopo che il layout è stato completato.
-        // Usiamo il container della griglia per il post, ma qualsiasi vista andrebbe bene.
         val gridContainer = findViewById<View>(R.id.grid_container)
         gridContainer.post {
-            getImageViewCoordinates() // Prende le coordinate delle image view e le normalizza
-            // Passa una copia della lista per evitare problemi di concorrenza se il renderer la modifica
+            getImageViewCoordinates()
             processor.setScreenGridPoints(screenCoordinates)
-            Log.d("MainActivity", "Coordinate dei punti inviate al processor: $screenCoordinates")
+            Log.d("MainActivity", "Coordinates sent to processor: $screenCoordinates")
         }
 
     }
 
     fun sendMessageToWearables(message: String) {
+        if (System.currentTimeMillis() - lastSentMessage < messageDelay || message.isEmpty() || !preferencesManager.isWatchVibrationActive()) {
+            return
+        }
+        lastSentMessage = System.currentTimeMillis()
+
         Wearable.getNodeClient(this).connectedNodes.addOnCompleteListener { task ->
             if (task.isSuccessful && task.result != null) {
                 val nodes = task.result
                 if (nodes.isEmpty()) {
-                    Log.w(TAG, "Nessun dispositivo Wear OS connesso trovato.")
-                    Toast.makeText(this, "Nessun smartwatch connesso", Toast.LENGTH_SHORT).show()
                     return@addOnCompleteListener
                 }
 
-                Log.d(TAG, "Nodi trovati: ${nodes.size}")
                 val data = message.toByteArray(Charsets.UTF_8)
                 var successCount = 0
                 var failureCount = 0
@@ -140,13 +138,11 @@ class MainActivity : AppCompatActivity() {
                         VIBRATE_MESSAGE_PATH,
                         data
                     ).addOnSuccessListener {
-                        Log.d(TAG, "Messaggio inviato con successo a ${node.displayName} (${node.id})")
                         successCount++
                         if (successCount + failureCount == nodes.size) {
                             showToastResult(successCount, failureCount)
                         }
                     }.addOnFailureListener { e ->
-                        Log.e(TAG, "Errore invio messaggio a ${node.displayName} (${node.id}): ${e.message}")
                         failureCount++
                         if (successCount + failureCount == nodes.size) {
                             showToastResult(successCount, failureCount)
@@ -163,13 +159,13 @@ class MainActivity : AppCompatActivity() {
     private fun showToastResult(successCount: Int, failureCount: Int) {
         when {
             successCount > 0 && failureCount == 0 -> {
-                Toast.makeText(this, "Richiesta vibrazione inviata a tutti gli smartwatch", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Request sent smartwatch", Toast.LENGTH_SHORT).show()
             }
             successCount > 0 && failureCount > 0 -> {
-                Toast.makeText(this, "Richiesta vibrazione inviata a $successCount nodi, fallita per $failureCount nodi", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Request sent to $successCount nodes, failed on $failureCount", Toast.LENGTH_SHORT).show()
             }
             failureCount > 0 -> {
-                Toast.makeText(this, "Errore invio richiesta a tutti i nodi", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Error sending request to nodes", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -179,19 +175,17 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getImageViewCoordinates() {
         screenCoordinates.clear()
-        val locationOnScreen = IntArray(2) // Array per memorizzare le coordinate assolute [x, y]
+        val locationOnScreen = IntArray(2)
 
         gridPointImageViews.forEachIndexed { index, imageView ->
-            imageView.getLocationInWindow(locationOnScreen) // Coordinate assolute
+            imageView.getLocationInWindow(locationOnScreen)
 
             val centerX = locationOnScreen[0]
             val centerY = locationOnScreen[1]
 
-            // Creo il nuovo punto da aggiungere all'array screenCoordinates
             val newPoint = Point2D(centerX, centerY)
             screenCoordinates[resources.getResourceEntryName(imageView.id)] = newPoint
-            //screenCoordinates.add(PointF(centerX, centerY))
-            Log.d("MainActivity", "Punto ${index + 1} (${resources.getResourceEntryName(imageView.id)}): centro ($centerX, $centerY)")
+            Log.d("MainActivity", "Point ${index + 1} (${resources.getResourceEntryName(imageView.id)}): center ($centerX, $centerY)")
         }
     }
 
@@ -307,9 +301,9 @@ class MainActivity : AppCompatActivity() {
 
             if (cameraConfigList.isNotEmpty()) {
                 session.cameraConfig = cameraConfigList[0]
-                Log.i(TAG, "Configurazione della camera impostata per target 30 fps.")
+                Log.i(TAG, "Camera set to 30fps.")
             } else {
-                Log.w(TAG, "Nessuna configurazione della camera trovata che supporti un target di 30 fps.")
+                Log.w(TAG, "Unable to configure camera")
             }
         }
 
@@ -451,10 +445,6 @@ class MainActivity : AppCompatActivity() {
 
         val type = if (newValue) VoiceMessage.WATCH_VIBRATION_ENABLED else VoiceMessage.WATCH_VIBRATION_DISABLED
         vocalAssistant.playMessage(type, force = true)
-
-        //INVIA COMANDO ALL'OROLOGIO
-        val wearableCommand = if (newValue) "enable_vibration" else "disable_vibration"
-        sendMessageToWearables(wearableCommand)
     }
 
     @RequiresPermission(Manifest.permission.VIBRATE)
@@ -515,7 +505,6 @@ class MainActivity : AppCompatActivity() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
         }
 
-        // Richiesta permesso microfono
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1001)
         }
@@ -526,8 +515,7 @@ class MainActivity : AppCompatActivity() {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val command = matches?.firstOrNull()?.uppercase(Locale.getDefault()) ?: return
 
-                // Caricamento comandi vocali da strings.xml
-                val startCommands = resources.getStringArray(R.array.start).map { it.uppercase() }
+                                val startCommands = resources.getStringArray(R.array.start).map { it.uppercase() }
                 val stopCommands = resources.getStringArray(R.array.stop).map { it.uppercase() }
                 val vibrationCommands = resources.getStringArray(R.array.vibration_commands).map { it.uppercase() }
                 val disableVibrationCommands = resources.getStringArray(R.array.disable_vibration_commands).map { it.uppercase() }
@@ -536,16 +524,15 @@ class MainActivity : AppCompatActivity() {
                 val speechCommands = resources.getStringArray(R.array.enable_speech_commands).map { it.uppercase() }
                 val disableSpeechCommands = resources.getStringArray(R.array.disable_speech_commands).map { it.uppercase() }
 
-                // Controllo dei comandi
                 when {
                     startCommands.any { it in command } -> toggleARCore()
                     stopCommands.any { it in command } -> toggleARCore()
-                    vibrationCommands.any { it in command } ->  preferencesManager.setPhoneVibrationEnabled(true)
-                    disableVibrationCommands.any { it in command } ->  preferencesManager.setPhoneVibrationEnabled(false)
-                    watchVibrationCommands.any { it in command } ->  preferencesManager.setWatchVibrationActive(true)
-                    disableWatchVibrationCommands.any { it in command } ->  preferencesManager.setWatchVibrationActive(false)
-                    speechCommands.any { it in command } -> preferencesManager.setTTSEnabled(true)
-                    disableSpeechCommands.any { it in command } -> preferencesManager.setTTSEnabled(false)
+                    vibrationCommands.any { it in command } ->  togglePhoneVibration()
+                    disableVibrationCommands.any { it in command } ->  togglePhoneVibration()
+                    watchVibrationCommands.any { it in command } ->  toggleWatchVibration()
+                    disableWatchVibrationCommands.any { it in command } ->  toggleWatchVibration()
+                    speechCommands.any { it in command } -> toggleTTS()
+                    disableSpeechCommands.any { it in command } -> toggleTTS()
 
                 }
 
@@ -558,7 +545,6 @@ class MainActivity : AppCompatActivity() {
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
-                // Riavvia su errore
                 speechRecognizer.startListening(speechIntent)
             }
 
@@ -566,7 +552,6 @@ class MainActivity : AppCompatActivity() {
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
 
-        // Avvia ascolto iniziale
         speechRecognizer.startListening(speechIntent)
     }
 

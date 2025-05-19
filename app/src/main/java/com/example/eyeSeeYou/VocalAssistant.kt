@@ -14,7 +14,7 @@ class VocalAssistant(private val context: Context, private val preferencesManage
 
     private var lastMessage: String? = null
     private var lastMessageTime: Long = 0
-    private val MIN_DELAY_MS = 2500L
+    private val MIN_DELAY_MS = 3000L
 
     init {
         tts = TextToSpeech(context, this)
@@ -36,7 +36,7 @@ class VocalAssistant(private val context: Context, private val preferencesManage
                 val welcomeMessage = context.getString(R.string.welcome)
                 speak(welcomeMessage, force = true)
             } else {
-                Log.e("VocalAssistant", "Lingua non supportata o dati mancanti.")
+                Log.e("VocalAssistant", "Not supported language.")
             }
         }
     }
@@ -49,50 +49,21 @@ class VocalAssistant(private val context: Context, private val preferencesManage
         }
 
         if ((preferencesManager.isTTSEnabled() || force) && isReady) {
-            // Imposta la lingua del TTS in base alla lingua corrente del telefono/app
-            val locale = context.resources.configuration.locales[0]  // Locale corrente
+            val locale = context.resources.configuration.locales[0]
             val result = tts?.setLanguage(locale)
 
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Log.e("VocalAssistant", "Lingua non supportata dal TTS: $locale")
+                Log.e("VocalAssistant", "Not supported language: $locale")
             }
 
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
             lastMessage = text
             lastMessageTime = now
-            Log.d("VocalAssistant", "Parlato: $text con lingua $locale")
+            Log.d("VocalAssistant", "Talked: $text with language $locale")
         } else if (!isReady) {
-            Log.e("VocalAssistant", "TTS non pronto.")
+            Log.e("VocalAssistant", "TTS not ready.")
         }
     }
-
-    /*
-        fun getObstacleMessage(zones: Set<Zones>): String {
-            if (zones.isEmpty()) return ""
-
-            val vertical = when {
-                Zones.LOW in zones -> context.getString(R.string.vertical_low)
-                Zones.HIGH in zones -> context.getString(R.string.vertical_high)
-                Zones.CENTER in zones -> context.getString(R.string.vertical_center)
-                else -> ""
-            }
-
-            val horizontal = when {
-                Zones.LEFT_WALL in zones -> context.getString(R.string.horizontal_object_left)
-                Zones.RIGHT_WALL in zones -> context.getString(R.string.horizontal_object_right)
-                Zones.LEFT in zones -> context.getString(R.string.horizontal_left)
-                Zones.RIGHT in zones -> context.getString(R.string.horizontal_right)
-                else -> ""
-            }
-
-            return when {
-                vertical.isNotEmpty() && horizontal.isNotEmpty() -> context.getString(R.string.obstacle_vertical_horizontal, vertical, horizontal)
-                vertical.isNotEmpty() -> context.getString(R.string.obstacle_vertical, vertical)
-                horizontal.isNotEmpty() -> context.getString(R.string.obstacle_horizontal, horizontal)
-                else -> context.getString(R.string.obstacle_center)
-            }
-        }
-    */
 
     fun playMessage(type: VoiceMessage, force: Boolean = false) {
         val message = context.getString(type.resId)
@@ -104,9 +75,9 @@ class VocalAssistant(private val context: Context, private val preferencesManage
             tts?.stop()
             tts?.shutdown()
             isReady = false
-            Log.d("VocalAssistant", "TTS terminato.")
+            Log.d("VocalAssistant", "TTS terminated.")
         } else {
-            Log.e("VocalAssistant", "TTS non era inizializzato.")
+            Log.e("VocalAssistant", "TTS not initialized.")
         }
     }
 }

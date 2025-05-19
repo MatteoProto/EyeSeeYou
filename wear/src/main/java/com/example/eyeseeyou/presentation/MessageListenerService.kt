@@ -22,77 +22,52 @@ class MessageListenerService : WearableListenerService() {
         val command = String(messageEvent.data)
 
         if (messageEvent.path == "/vibration_command") {
-            Log.d(TAG, "Comando vibrazione ricevuto: $command")
+            Log.d(TAG, "Received vibration command: $command")
 
             when (command) {
                 "sx" -> {
                     if (isVibrationEnabled()) {
-                        Log.d(TAG, "Attivazione vibrazione per lato sinistro.")
+                        Log.d(TAG, "Left Vibration.")
                         triggerVibration(longArrayOf(0, 100, 150, 500))
                     }
                 }
 
                 "dx" -> {
                     if (isVibrationEnabled()) {
-                        Log.d(TAG, "Attivazione vibrazione per lato destro.")
+                        Log.d(TAG, "Right vibration.")
                         triggerVibration(longArrayOf(0, 500, 150, 100))
                     }
                 }
 
                 "up" -> {
                     if (isVibrationEnabled()) {
-                        Log.d(TAG, "Vibrazione per ostacolo alto.")
+                        Log.d(TAG, "Center vibration.")
                         triggerVibration(longArrayOf(0, 300))
                     }
                 }
 
                 "down" -> {
                     if (isVibrationEnabled()) {
-                        Log.d(TAG, "Vibrazione per ostacolo basso.")
+                        Log.d(TAG, "Low vibration.")
                         triggerVibration(longArrayOf(0, 300, 150, 300))
                     }
                 }
 
                 "dangerous" -> {
                     if (isVibrationEnabled()) {
-                        Log.d(TAG, "Vibrazione per ostacolo pericoloso (STOP).")
+                        Log.d(TAG, "Stop vibration")
                         triggerVibration(longArrayOf(0, 1000))
                     }
                 }
 
                 "generics" -> {
                     if (isVibrationEnabled()) {
-                        Log.d(TAG, "Vibrazione generica per ostacolo.")
+                        Log.d(TAG, "Generic vibration.")
                         triggerVibration(longArrayOf(0, 200))
                     }
                 }
-
-                "enable_vibration" -> {
-                    Log.d(TAG, "Vibrazione orologio abilitata.")
-                    WatchPreferences.setVibrationEnabled(applicationContext, true)
-                }
-
-                "disable_vibration" -> {
-                    Log.d(TAG, "Vibrazione orologio disabilitata.")
-                    WatchPreferences.setVibrationEnabled(applicationContext, false)
-
-                    // FERMA vibrazione in corso
-                    val vibrator: Vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                        vibratorManager.defaultVibrator
-                    } else {
-                        @Suppress("DEPRECATION")
-                        getSystemService(VIBRATOR_SERVICE) as Vibrator
-                    }
-
-                    if (vibrator.hasVibrator()) {
-                        vibrator.cancel()
-                        Log.d(TAG, "Vibrazione fermata manualmente.")
-                    }
-                }
-
                 else -> {
-                    Log.w(TAG, "Comando sconosciuto: $command")
+                    Log.w(TAG, "Wrong command: $command")
                 }
             }
         } else {
@@ -111,18 +86,18 @@ class MessageListenerService : WearableListenerService() {
         }
 
         if (!vibrator.hasVibrator()) {
-            Log.w(TAG, "Il dispositivo non supporta la vibrazione.")
+            Log.w(TAG, "Not supported vibration.")
             return
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val vibrationEffect = VibrationEffect.createWaveform(pattern, -1)
             vibrator.vibrate(vibrationEffect)
-            Log.d(TAG, "Vibrazione avviata con waveform (API >= 26): ${pattern.joinToString()}")
+            Log.d(TAG, "Vibration started waveform (API >= 26): ${pattern.joinToString()}")
         } else {
             @Suppress("DEPRECATION")
             vibrator.vibrate(pattern, -1)
-            Log.d(TAG, "Vibrazione avviata con waveform legacy (API < 26): ${pattern.joinToString()}")
+            Log.d(TAG, "Vibration started waveform legacy (API < 26): ${pattern.joinToString()}")
         }
     }
 
