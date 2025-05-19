@@ -1,4 +1,4 @@
-package com.example.eyeSeeYou
+package com.example.eyeSeeYou.Managers
 
 import android.Manifest
 import android.content.Context
@@ -8,7 +8,7 @@ import android.os.Vibrator
 import android.util.Log
 import androidx.annotation.RequiresPermission
 
-class VibrationManager(private val context: Context,private val preferencesManager: PreferencesManager) {
+class VibrationManager(private val context: Context, private val preferencesManager: PreferencesManager) {
 
     private val vibrator: Vibrator? = context.getSystemService(Vibrator::class.java)
 

@@ -1,4 +1,4 @@
-package com.example.eyeSeeYou
+package com.example.eyeSeeYou.Managers
 
 import android.content.Context
 

@@ -19,10 +19,14 @@ import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.eyeSeeYou.Managers.PreferencesManager
+import com.example.eyeSeeYou.Managers.VibrationManager
+import com.example.eyeSeeYou.Managers.VocalAssistant
 import com.example.eyeSeeYou.helpers.CameraPermissionHelper
 import com.example.eyeSeeYou.helpers.DepthSettings
 import com.example.eyeSeeYou.helpers.EisSettings
 import com.example.eyeSeeYou.helpers.FullScreenHelper
+import com.example.eyeSeeYou.helpers.Point2D
 import com.example.eyeSeeYou.helpers.VoiceMessage
 import com.example.eyeSeeYou.samplerender.SampleRender
 import com.google.android.gms.wearable.Wearable

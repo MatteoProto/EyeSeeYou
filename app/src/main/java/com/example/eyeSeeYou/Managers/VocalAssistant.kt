@@ -1,11 +1,11 @@
-package com.example.eyeSeeYou
+package com.example.eyeSeeYou.Managers
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.util.Log
+import com.example.eyeSeeYou.R
 import com.example.eyeSeeYou.helpers.VoiceMessage
-import java.util.*
-import com.example.eyeSeeYou.helpers.Zones
+import java.util.Locale
 
 class VocalAssistant(private val context: Context, private val preferencesManager: PreferencesManager) : TextToSpeech.OnInitListener {
 
@@ -81,6 +81,3 @@ class VocalAssistant(private val context: Context, private val preferencesManage
         }
     }
 }
-
-
-

@@ -1,4 +1,4 @@
-package com.example.eyeSeeYou
+package com.example.eyeSeeYou.helpers
 
 import com.google.ar.core.Pose
 

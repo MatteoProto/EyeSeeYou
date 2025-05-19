@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.example.eyeSeeYou.Managers.VocalAssistant
 import com.example.eyeSeeYou.helpers.DisplayRotationHelper
 import com.example.eyeSeeYou.helpers.TrackingStateHelper
 import com.example.eyeSeeYou.samplerender.Framebuffer

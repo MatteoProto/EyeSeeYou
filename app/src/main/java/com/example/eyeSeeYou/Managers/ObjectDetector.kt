@@ -1,13 +1,13 @@
-package com.example.eyeSeeYou
+package com.example.eyeSeeYou.Managers
 
 import android.media.Image
-import com.example.eyeSeeYou.MainProcessor.PointData
+import com.example.eyeSeeYou.MainProcessor
 import com.example.eyeSeeYou.helpers.Zones
 import com.google.ar.core.SemanticLabel
 import java.nio.ByteOrder
-import kotlin.collections.containsKey
+import kotlin.collections.iterator
 
-class Identifier {
+class ObjectDetector {
 
     fun identify(semantic: Image, depth: Image): MutableMap<SemanticLabel, Set<Zones>>{
 
@@ -42,8 +42,8 @@ class Identifier {
         semanticImage: Image,
         depthImage: Image,
         maxDistanceMeters: Float = 3.5f
-    ): Map<SemanticLabel, MutableList<PointData>> {
-        val labeledPoints = mutableMapOf<SemanticLabel, MutableList<PointData>>()
+    ): Map<SemanticLabel, MutableList<MainProcessor.PointData>> {
+        val labeledPoints = mutableMapOf<SemanticLabel, MutableList<MainProcessor.PointData>>()
 
         try {
             val semanticWidth = semanticImage.width
@@ -72,7 +72,7 @@ class Identifier {
                     if (depthMeters in 0.0f..maxDistanceMeters) {
                         //Log.d("$label", "(width: $depthWidth, height: $depthHeight) (width: $semanticWidth, height: $semanticHeight) (x: $x, y: $y)")
                         labeledPoints.getOrPut(label) { mutableListOf() }
-                            .add(PointData(x, y, depthMeters))
+                            .add(MainProcessor.PointData(x, y, depthMeters))
                     }
                 }
             }
@@ -83,7 +83,7 @@ class Identifier {
     }
 
     private fun getNearbyLabels(
-        labeledPoints: Map<SemanticLabel, List<PointData>>,
+        labeledPoints: Map<SemanticLabel, List<MainProcessor.PointData>>,
         height: Int,
         width: Int,
         maxDistanceMeters: Float = 2.0f
@@ -115,7 +115,7 @@ class Identifier {
 
     private fun computeZonesForLabels(
         nearObjects: Set<SemanticLabel>,
-        labeledPoints: Map<SemanticLabel, List<PointData>>,
+        labeledPoints: Map<SemanticLabel, List<MainProcessor.PointData>>,
         height: Int,
         width: Int
     ): MutableMap<SemanticLabel, Set<Zones>> {

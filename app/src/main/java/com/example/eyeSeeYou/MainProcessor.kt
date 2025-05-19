@@ -2,6 +2,9 @@ package com.example.eyeSeeYou
 
 import android.media.Image
 import android.util.Log
+import com.example.eyeSeeYou.Managers.ObjectDetector
+import com.example.eyeSeeYou.helpers.Point2D
+import com.example.eyeSeeYou.helpers.Point3D
 import com.example.eyeSeeYou.helpers.VoiceMessage
 import com.example.eyeSeeYou.helpers.Zones
 import com.google.ar.core.DepthPoint
@@ -10,7 +13,6 @@ import com.google.ar.core.Point
 import com.google.ar.core.Pose
 import com.google.ar.core.SemanticLabel
 import com.google.ar.core.exceptions.NotYetAvailableException
-import java.nio.ShortBuffer
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -27,7 +29,7 @@ class MainProcessor {
 
     data class PointData(val x: Int, val y: Int, val depth: Float)
 
-    private val identifier: Identifier = Identifier()
+    private val objectDetector: ObjectDetector = ObjectDetector()
 
     private val history: ArrayDeque<Map<SemanticLabel, Set<Zones>>> = ArrayDeque()
 
@@ -55,12 +57,12 @@ class MainProcessor {
             val depth = depthImage ?: frame.acquireDepthImage16Bits()
 
             /** Compute obstacles */
-            val labelsPosition = identifier.identify(semantic, depth)
+            val labelsPosition = objectDetector.identify(semantic, depth)
             if (history.size >= 3) {
                 history.removeFirst()
             }
             history.addLast(labelsPosition)
-            val (_,labelMap) = identifier.computeStableZoneLabels(history)
+            val (_,labelMap) = objectDetector.computeStableZoneLabels(history)
 
             /** Compute steps */
             val res = processStep(frame, screenGridPoints)
