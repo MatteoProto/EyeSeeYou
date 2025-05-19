@@ -75,6 +75,20 @@ class MessageListenerService : WearableListenerService() {
                 "disable_vibration" -> {
                     Log.d(TAG, "Vibrazione orologio disabilitata.")
                     WatchPreferences.setVibrationEnabled(applicationContext, false)
+
+                    // FERMA vibrazione in corso
+                    val vibrator: Vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                        vibratorManager.defaultVibrator
+                    } else {
+                        @Suppress("DEPRECATION")
+                        getSystemService(VIBRATOR_SERVICE) as Vibrator
+                    }
+
+                    if (vibrator.hasVibrator()) {
+                        vibrator.cancel()
+                        Log.d(TAG, "Vibrazione fermata manualmente.")
+                    }
                 }
 
                 else -> {
