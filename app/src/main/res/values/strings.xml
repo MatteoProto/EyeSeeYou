@@ -28,6 +28,8 @@
   <string name="tts_disabled">Text-to-speech disabled</string>
   <string name="vibration_enabled">Vibration enabled</string>
   <string name="vibration_disabled">Vibration disabled</string>
+  <string name="watch_vibration_enabled">Watch vibration activated.</string>
+  <string name="watch_vibration_disabled">Watch vibration off</string>
   <string name="camera_permission_required">Camera permission is required to use the app</string>
 
   <string name="warning_stepdown">Warning, step down ahead.</string>
@@ -60,9 +62,48 @@
   <string name="obstacle_horizontal">obstacle %1$s</string>
   <string name="obstacle_center">obstacle in front</string>
 
-  <string name="voice_help">Voice Help</string>
-  <string name="watch_vibration_enabled">Watch vibration activated.</string>
-  <string name="watch_vibration_disabled">Watch vibration off</string>
+
+    <string name="voice_help">Voice Help</string>
+
+    <string-array name="start">
+      <item>start</item>
+      <item>begin</item>
+      <item>go</item>
+    </string-array>
+
+    <string-array name="stop">
+      <item>stop</item>
+      <item>end</item>
+      <item>terminate</item>
+    </string-array>
+
+    <string-array name="vibration_commands">
+      <item>enable phone vibration</item>
+    </string-array>
+
+    <string-array name="disable_vibration_commands">
+      <item>disattiva vibrazione telefono</item>
+    </string-array>
+
+    <string-array name="watch_vibration_commands">
+      <item>enable watch vibration</item>
+    </string-array>
+
+    <string-array name="disable_watch_vibration_commands">
+     <item>disattiva vibrazione orologio</item>
+    </string-array>
+
+  <string-array name="enable_speech_commands">
+      <item>start voice</item>
+      <item>voice</item>
+      <item>talk</item>
+      <item>speak</item>
+    </string-array>
+
+  <string-array name="disable_speech_commands">
+    <item>stop voice</item>
+    <item>voice</item>
+  </string-array>
 
   <string name="error_install_ar">Install Google Play Services for AR</string>
   <string name="error_update_arcore">Update ARCore</string>

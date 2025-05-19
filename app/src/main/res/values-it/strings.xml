@@ -11,6 +11,8 @@
     <string name="tts_disabled">Sintesi vocale disattivata</string>
     <string name="vibration_enabled">Vibrazione attivata</string>
     <string name="vibration_disabled">Vibrazione disattivata</string>
+    <string name="watch_vibration_enabled">Vibrazione orologio attivata.</string>
+    <string name="watch_vibration_disabled">Vibrazione orologio disattivata.</string>
     <string name="camera_permission_required">La fotocamera è necessaria per usare l app</string>
 
     <string name="warning_stepdown">Attenzione, gradino in discesa.</string>
@@ -44,8 +46,44 @@
     <string name="obstacle_center">ostacolo davanti</string>
 
     <string name="voice_help">Help Vocale</string>
-    <string name="watch_vibration_enabled">Vibrazione orologio attivata.</string>
-    <string name="watch_vibration_disabled">Vibrazione orologio disattivata.</string>
+
+        <string-array name="start">
+            <item>avvia</item>
+            <item>inizia</item>
+            <item>vai</item>
+        </string-array>
+
+        <string-array name="stop">
+            <item>ferma</item>
+            <item>stop</item>
+            <item>termina</item>
+        </string-array>
+
+        <string-array name="vibration_commands">
+            <item>attiva vibrazione telefono</item>
+        </string-array>
+
+        <string-array name="disable_vibration_commands">
+            <item>disattiva vibrazione telefono</item>
+        </string-array>
+
+        <string-array name="watch_vibration_commands">
+            <item>attiva vibrazione orologio</item>
+        </string-array>
+
+        <string-array name="disable_watch_vibration_commands">
+         <item>disattiva vibrazione orologio</item>
+        </string-array>
+
+        <string-array name="enable_speech_commands">
+            <item>voce</item>
+            <item>parla</item>
+        </string-array>
+
+        <string-array name="disable_speech_commands">
+            <item>stop voice</item>
+            <item>voice</item>
+        </string-array>
 
 
     <string name="error_install_ar">Installa Google Play Services for AR</string>

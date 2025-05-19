@@ -491,6 +491,8 @@ class MainActivity : AppCompatActivity() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
         }
+
+        // Richiesta permesso microfono
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1001)
         }
@@ -501,18 +503,30 @@ class MainActivity : AppCompatActivity() {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val command = matches?.firstOrNull()?.uppercase(Locale.getDefault()) ?: return
 
+                // Caricamento comandi vocali da strings.xml
+                val startCommands = resources.getStringArray(R.array.start).map { it.uppercase() }
+                val stopCommands = resources.getStringArray(R.array.stop).map { it.uppercase() }
+                val vibrationCommands = resources.getStringArray(R.array.vibration_commands).map { it.uppercase() }
+                val disableVibrationCommands = resources.getStringArray(R.array.disable_vibration_commands).map { it.uppercase() }
+                val watchVibrationCommands = resources.getStringArray(R.array.watch_vibration_commands).map { it.uppercase() }
+                val disableWatchVibrationCommands = resources.getStringArray(R.array.disable_watch_vibration_commands).map { it.uppercase() }
+                val speechCommands = resources.getStringArray(R.array.enable_speech_commands).map { it.uppercase() }
+                val disableSpeechCommands = resources.getStringArray(R.array.disable_speech_commands).map { it.uppercase() }
+
+                // Controllo dei comandi
                 when {
-                    "START" in command -> toggleARCore()
-                    "STOP" in command -> {
-                        toggleARCore()
-                    }
-                    "VIBRATION" in command -> togglePhoneVibration()
-                    "VIBRATION WATCH" in command -> toggleWatchVibration()
-                    "SPEECH" in command -> toggleTTS()
+                    startCommands.any { it in command } -> toggleARCore()
+                    stopCommands.any { it in command } -> toggleARCore()
+                    vibrationCommands.any { it in command } ->  preferencesManager.setPhoneVibrationEnabled(true)
+                    disableVibrationCommands.any { it in command } ->  preferencesManager.setPhoneVibrationEnabled(false)
+                    watchVibrationCommands.any { it in command } ->  preferencesManager.setWatchVibrationActive(true)
+                    disableWatchVibrationCommands.any { it in command } ->  preferencesManager.setWatchVibrationActive(false)
+                    speechCommands.any { it in command } -> preferencesManager.setTTSEnabled(true)
+                    disableSpeechCommands.any { it in command } -> preferencesManager.setTTSEnabled(false)
+
                 }
 
-                // Restart listener
-                speechRecognizer.startListening(intent)
+                speechRecognizer.startListening(speechIntent)
             }
 
             override fun onReadyForSpeech(params: Bundle?) {}
@@ -521,15 +535,16 @@ class MainActivity : AppCompatActivity() {
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
-                // Restart on error
-                speechRecognizer.startListening(intent)
+                // Riavvia su errore
+                speechRecognizer.startListening(speechIntent)
             }
 
             override fun onPartialResults(partialResults: Bundle?) {}
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
 
-        speechRecognizer.startListening(intent)
+        // Avvia ascolto iniziale
+        speechRecognizer.startListening(speechIntent)
     }
 
 }
