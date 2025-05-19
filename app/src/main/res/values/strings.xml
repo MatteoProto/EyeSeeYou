@@ -61,6 +61,8 @@
   <string name="obstacle_center">obstacle in front</string>
 
   <string name="voice_help">Voice Help</string>
+  <string name="watch_vibration_enabled">Watch vibration activated.</string>
+  <string name="watch_vibration_disabled">Watch vibration off</string>
 
   <string name="error_install_ar">Install Google Play Services for AR</string>
   <string name="error_update_arcore">Update ARCore</string>

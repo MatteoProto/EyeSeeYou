@@ -44,6 +44,9 @@
     <string name="obstacle_center">ostacolo davanti</string>
 
     <string name="voice_help">Help Vocale</string>
+    <string name="watch_vibration_enabled">Vibrazione orologio attivata.</string>
+    <string name="watch_vibration_disabled">Vibrazione orologio disattivata.</string>
+
 
     <string name="error_install_ar">Installa Google Play Services for AR</string>
     <string name="error_update_arcore">Aggiorna ARCore</string>

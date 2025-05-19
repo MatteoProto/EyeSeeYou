@@ -430,7 +430,7 @@ class MainActivity : AppCompatActivity() {
         preferencesManager.setWatchVibrationActive(newValue)
         vibrationManager.longVibration()
 
-        val type = if (newValue) VoiceMessage.VIBRATION_ENABLED else VoiceMessage.VIBRATION_DISABLED
+        val type = if (newValue) VoiceMessage.WATCH_VIBRATION_ENABLED else VoiceMessage.WATCH_VIBRATION_DISABLED
         vocalAssistant.playMessage(type, force = true)
     }
 
@@ -503,7 +503,9 @@ class MainActivity : AppCompatActivity() {
 
                 when {
                     "START" in command -> toggleARCore()
-                    "STOP" in command -> toggleARCore()
+                    "STOP" in command -> {
+                        toggleARCore()
+                    }
                     "VIBRATION" in command -> togglePhoneVibration()
                     "VIBRATION WATCH" in command -> toggleWatchVibration()
                     "SPEECH" in command -> toggleTTS()

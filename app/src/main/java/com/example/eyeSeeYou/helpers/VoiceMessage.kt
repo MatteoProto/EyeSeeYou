@@ -4,7 +4,6 @@ import androidx.annotation.StringRes
 import com.example.eyeSeeYou.R
 
 enum class VoiceMessage(@StringRes val resId: Int) {
-    WELCOME(R.string.welcome),
     WARNING_STEPUP(R.string.warning_stepup),
     WARNING_STEPDOWN(R.string.warning_stepdown),
     WARNING(R.string.warning),
@@ -14,7 +13,8 @@ enum class VoiceMessage(@StringRes val resId: Int) {
     TTS_DISABLED(R.string.tts_disabled),
     VIBRATION_ENABLED(R.string.vibration_enabled),
     VIBRATION_DISABLED(R.string.vibration_disabled),
-    WARNING_OBSTACLE(R.string.warning_obstacle),
+    WATCH_VIBRATION_ENABLED(R.string.watch_vibration_enabled),
+    WATCH_VIBRATION_DISABLED(R.string.watch_vibration_disabled),
     WARNING_OBSTACLE_LEFT(R.string.warning_obstacle_left),
     WARNING_OBSTACLE_RIGHT(R.string.warning_obstacle_right),
     WARNING_OBSTACLE_CENTER(R.string.warning_obstacle_center),
@@ -26,7 +26,6 @@ enum class VoiceMessage(@StringRes val resId: Int) {
     WARNING_OBSTACLE_LEFT_HUGE(R.string.warning_obstacle_left_huge),
     WARNING_OBSTACLE_RIGHT_HUGE(R.string.warning_obstacle_right_huge),
     WARNING_OBSTACLE_STOP(R.string.warning_obstacle_stop),
-
     WARNING_ALMOST_ON_STEP(R.string.warning_almost_on_a_step),
     WARNING_STEP_PIT(R.string.warning_pit),
 }
