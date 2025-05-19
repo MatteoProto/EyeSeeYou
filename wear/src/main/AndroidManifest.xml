@@ -2,9 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.eyeseeyou">
 
+    <!-- Permessi necessari -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Indica che l'app è per dispositivi Wear OS -->
     <uses-feature android:name="android.hardware.type.watch" />
 
     <application
@@ -13,18 +15,18 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
+
+        <!-- Libreria wearable -->
         <uses-library
             android:name="com.google.android.wearable"
             android:required="true" />
 
-        <!--
-               Set to true if your app is Standalone, that is, it does not require the handheld
-               app to run.
-        -->
+        <!-- Se l'app è standalone (non richiede lo smartphone) -->
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
+        <!-- MainActivity (UI principale) -->
         <activity
             android:name="com.example.eyeseeyou.presentation.MainActivity"
             android:exported="true"
@@ -32,17 +34,19 @@
             android:theme="@style/MainActivityTheme.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <service android:name="com.example.eyeseeyou.presentation.MessageListenerService"
-            android:permission="com.google.android.wearable.BIND_LISTENER_SERVICE"
-            android:exported="true">
+        <!-- Servizio per ricevere messaggi dal telefono e avviare la vibrazione -->
+        <service
+            android:name="com.example.eyeseeyou.presentation.MessageListenerService"
+            android:exported="true"
+            android:permission="com.google.android.gms.permission.BIND_LISTENER">
             <intent-filter>
-                <action android:name="com.google.android.wearable.MESSAGE_RECEIVED" />
+                <action android:name="com.google.android.gms.wearable.BIND_LISTENER" />
             </intent-filter>
         </service>
+
     </application>
 </manifest>

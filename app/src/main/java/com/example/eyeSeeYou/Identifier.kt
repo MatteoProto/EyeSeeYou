@@ -22,7 +22,7 @@ class Identifier {
     private fun findLabel(byte: Byte): SemanticLabel {
         return when (byte.toInt()) {
             1 -> SemanticLabel.SKY
-            // 2 -> SemanticLabel.BUILDING
+            2 -> SemanticLabel.BUILDING
             3 -> SemanticLabel.TREE
             4 -> SemanticLabel.ROAD
             5 -> SemanticLabel.SIDEWALK

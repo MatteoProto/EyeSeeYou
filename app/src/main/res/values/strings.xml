@@ -82,7 +82,7 @@
     </string-array>
 
     <string-array name="disable_vibration_commands">
-      <item>disattiva vibrazione telefono</item>
+      <item>disable phone vibration</item>
     </string-array>
 
     <string-array name="watch_vibration_commands">
@@ -90,7 +90,7 @@
     </string-array>
 
     <string-array name="disable_watch_vibration_commands">
-     <item>disattiva vibrazione orologio</item>
+     <item>disable watch vibration</item>
     </string-array>
 
   <string-array name="enable_speech_commands">

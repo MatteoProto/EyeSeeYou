@@ -46,6 +46,8 @@ dependencies {
     implementation(libs.androidx.percentlayout)
     implementation(libs.androidx.legacy.support.v4)
     implementation("androidx.recyclerview:recyclerview:1.4.0")
+    implementation("androidx.preference:preference:1.2.1")
+
     // Librerie specifiche per Wear OS UI (se necessario per UI più complesse)
     implementation(libs.androidx.wear)
 

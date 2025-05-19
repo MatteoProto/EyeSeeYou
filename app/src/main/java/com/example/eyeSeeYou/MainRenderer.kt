@@ -235,13 +235,7 @@ class MainRenderer(
         } else if (output == null) {
             activity.view.snackbarHelper.hide(activity)
         } else {
-
-            if(output == VoiceMessage.WARNING_OBSTACLE_LEFT_HUGE){
-                // Vibrazione smartwatch
-                activity.sendMessageToWearables("sx")
-            }else if(output == VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE){
-                // Vibrazione smartwatch
-                activity.sendMessageToWearables("dx")
+            output.wearableCommand?.let { command -> activity.sendMessageToWearables(command.name.lowercase())
             }
 
             activity.vocalAssistant.playMessage(output)

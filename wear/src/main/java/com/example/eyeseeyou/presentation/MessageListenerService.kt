@@ -7,28 +7,79 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import com.example.eyeseeyou.presentation.util.WatchPreferences
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 
 class MessageListenerService : WearableListenerService() {
 
-    private val VIBRATE_MESSAGE_PATH = "/vibrate_request"
-    private val TAG = "WearMessageListener"
-    private val VIBRATION_DURATION_MS = 500L // Durata della vibrazione in millisecondi
+    companion object {
+        private const val TAG = "WearMessageListener"
+    }
 
     @RequiresPermission(Manifest.permission.VIBRATE)
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        Log.d(TAG, "Messaggio ricevuto: ${messageEvent.path}")
+        val command = String(messageEvent.data)
 
-        // Controlla se il path del messaggio corrisponde a quello che ci aspettiamo
-        if (messageEvent.path == VIBRATE_MESSAGE_PATH) {
-            Log.d(TAG, "Path corrisponde, avvio vibrazione...")
-            val data = messageEvent.data
-            val command = String(data, Charsets.UTF_8)
-            when(command){
-                "sx" -> triggerVibration(longArrayOf(0, 500, 200, 100, 200, 100))
-                "dx" -> triggerVibration(longArrayOf(0, 200, 500, 100, 500, 100))
-                else -> println("Comando vibrazione sconosciuto: $command")
+        if (messageEvent.path == "/vibration_command") {
+            Log.d(TAG, "Comando vibrazione ricevuto: $command")
+
+            when (command) {
+                "sx" -> {
+                    if (isVibrationEnabled()) {
+                        Log.d(TAG, "Attivazione vibrazione per lato sinistro.")
+                        triggerVibration(longArrayOf(0, 100, 150, 500))
+                    }
+                }
+
+                "dx" -> {
+                    if (isVibrationEnabled()) {
+                        Log.d(TAG, "Attivazione vibrazione per lato destro.")
+                        triggerVibration(longArrayOf(0, 500, 150, 100))
+                    }
+                }
+
+                "up" -> {
+                    if (isVibrationEnabled()) {
+                        Log.d(TAG, "Vibrazione per ostacolo alto.")
+                        triggerVibration(longArrayOf(0, 300))
+                    }
+                }
+
+                "down" -> {
+                    if (isVibrationEnabled()) {
+                        Log.d(TAG, "Vibrazione per ostacolo basso.")
+                        triggerVibration(longArrayOf(0, 300, 150, 300))
+                    }
+                }
+
+                "dangerous" -> {
+                    if (isVibrationEnabled()) {
+                        Log.d(TAG, "Vibrazione per ostacolo pericoloso (STOP).")
+                        triggerVibration(longArrayOf(0, 1000))
+                    }
+                }
+
+                "generics" -> {
+                    if (isVibrationEnabled()) {
+                        Log.d(TAG, "Vibrazione generica per ostacolo.")
+                        triggerVibration(longArrayOf(0, 200))
+                    }
+                }
+
+                "enable_vibration" -> {
+                    Log.d(TAG, "Vibrazione orologio abilitata.")
+                    WatchPreferences.setVibrationEnabled(applicationContext, true)
+                }
+
+                "disable_vibration" -> {
+                    Log.d(TAG, "Vibrazione orologio disabilitata.")
+                    WatchPreferences.setVibrationEnabled(applicationContext, false)
+                }
+
+                else -> {
+                    Log.w(TAG, "Comando sconosciuto: $command")
+                }
             }
         } else {
             super.onMessageReceived(messageEvent)
@@ -37,34 +88,31 @@ class MessageListenerService : WearableListenerService() {
 
     @RequiresPermission(Manifest.permission.VIBRATE)
     private fun triggerVibration(pattern: LongArray) {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Per Android 12 (API 31) e successivi
+        val vibrator: Vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
         } else {
-            // Deprecato da API 31, ma necessario per compatibilità
             @Suppress("DEPRECATION")
             getSystemService(VIBRATOR_SERVICE) as Vibrator
         }
 
-        // Controlla se il dispositivo ha un vibratore
         if (!vibrator.hasVibrator()) {
             Log.w(TAG, "Il dispositivo non supporta la vibrazione.")
             return
         }
 
-        // Crea l'effetto di vibrazione
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Per Android Oreo (API 26) e successivi
-            //val vibrationEffect = VibrationEffect.createOneShot(VIBRATION_DURATION_MS, VibrationEffect.DEFAULT_AMPLITUDE)
             val vibrationEffect = VibrationEffect.createWaveform(pattern, -1)
             vibrator.vibrate(vibrationEffect)
-            Log.d(TAG, "Vibrazione avviata (API >= 26)")
+            Log.d(TAG, "Vibrazione avviata con waveform (API >= 26): ${pattern.joinToString()}")
         } else {
-            // Deprecato da API 26, ma necessario per compatibilità
             @Suppress("DEPRECATION")
-            vibrator.vibrate(VIBRATION_DURATION_MS)
-            Log.d(TAG, "Vibrazione avviata (API < 26)")
+            vibrator.vibrate(pattern, -1)
+            Log.d(TAG, "Vibrazione avviata con waveform legacy (API < 26): ${pattern.joinToString()}")
         }
+    }
+
+    private fun isVibrationEnabled(): Boolean {
+        return WatchPreferences.isVibrationEnabled(applicationContext)
     }
 }

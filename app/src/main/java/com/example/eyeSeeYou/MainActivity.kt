@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity() {
     private var torchTimer: Handler? = null
 
     private val renderHandler = Handler(Looper.getMainLooper())
-    private val desiredFps = 30L
+    private val desiredFps = 20L
 
     private var y1 = 0f
     private var y2 = 0f
@@ -120,7 +120,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun sendMessageToWearables(message: String) {
-        // Ottieni i nodi (smartwatch) connessi
         Wearable.getNodeClient(this).connectedNodes.addOnCompleteListener { task ->
             if (task.isSuccessful && task.result != null) {
                 val nodes = task.result
@@ -129,28 +128,48 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "Nessun smartwatch connesso", Toast.LENGTH_SHORT).show()
                     return@addOnCompleteListener
                 }
+
                 Log.d(TAG, "Nodi trovati: ${nodes.size}")
                 val data = message.toByteArray(Charsets.UTF_8)
-                // Invia il messaggio a tutti i nodi connessi
+                var successCount = 0
+                var failureCount = 0
+
                 nodes.forEach { node ->
                     Wearable.getMessageClient(this).sendMessage(
-                        node.id,               // ID del nodo destinatario
-                        VIBRATE_MESSAGE_PATH,  // Path univoco del messaggio
-                        data                   // Payload (dati), null in questo caso
-                    ).apply {
-                        addOnSuccessListener {
-                            Log.d(TAG, "Messaggio inviato con successo a ${node.displayName} (${node.id})")
-                            Toast.makeText(this@MainActivity, "Richiesta vibrazione inviata", Toast.LENGTH_SHORT).show()
+                        node.id,
+                        VIBRATE_MESSAGE_PATH,
+                        data
+                    ).addOnSuccessListener {
+                        Log.d(TAG, "Messaggio inviato con successo a ${node.displayName} (${node.id})")
+                        successCount++
+                        if (successCount + failureCount == nodes.size) {
+                            showToastResult(successCount, failureCount)
                         }
-                        addOnFailureListener { e ->
-                            Log.e(TAG, "Errore invio messaggio a ${node.displayName} (${node.id}): ${e.message}")
-                            Toast.makeText(this@MainActivity, "Errore invio richiesta", Toast.LENGTH_SHORT).show()
+                    }.addOnFailureListener { e ->
+                        Log.e(TAG, "Errore invio messaggio a ${node.displayName} (${node.id}): ${e.message}")
+                        failureCount++
+                        if (successCount + failureCount == nodes.size) {
+                            showToastResult(successCount, failureCount)
                         }
                     }
                 }
             } else {
                 Log.e(TAG, "Errore nel recuperare i nodi connessi: ${task.exception}")
                 Toast.makeText(this, "Errore nel trovare lo smartwatch", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showToastResult(successCount: Int, failureCount: Int) {
+        when {
+            successCount > 0 && failureCount == 0 -> {
+                Toast.makeText(this, "Richiesta vibrazione inviata a tutti gli smartwatch", Toast.LENGTH_SHORT).show()
+            }
+            successCount > 0 && failureCount > 0 -> {
+                Toast.makeText(this, "Richiesta vibrazione inviata a $successCount nodi, fallita per $failureCount nodi", Toast.LENGTH_SHORT).show()
+            }
+            failureCount > 0 -> {
+                Toast.makeText(this, "Errore invio richiesta a tutti i nodi", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -432,6 +451,10 @@ class MainActivity : AppCompatActivity() {
 
         val type = if (newValue) VoiceMessage.WATCH_VIBRATION_ENABLED else VoiceMessage.WATCH_VIBRATION_DISABLED
         vocalAssistant.playMessage(type, force = true)
+
+        //INVIA COMANDO ALL'OROLOGIO
+        val wearableCommand = if (newValue) "enable_vibration" else "disable_vibration"
+        sendMessageToWearables(wearableCommand)
     }
 
     @RequiresPermission(Manifest.permission.VIBRATE)

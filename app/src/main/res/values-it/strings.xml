@@ -81,8 +81,8 @@
         </string-array>
 
         <string-array name="disable_speech_commands">
-            <item>stop voice</item>
-            <item>voice</item>
+            <item>stop voce</item>
+            <item>voce</item>
         </string-array>
 
 

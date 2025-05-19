@@ -1,74 +1,65 @@
-/* While this template provides a good starting point for using Wear Compose, you can always
- * take a look at https://github.com/android/wear-os-samples/tree/main/ComposeStarter to find the
- * most up to date changes to the libraries and their usages.
- */
-
 package com.example.eyeseeyou.presentation
 
 import android.os.Bundle
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText
-import androidx.wear.tooling.preview.devices.WearDevices
-import com.example.eyeseeyou.R
-import com.example.eyeseeyou.presentation.theme.EyeSeeYouTheme
+import com.google.android.gms.wearable.MessageClient
+import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.Wearable
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), MessageClient.OnMessageReceivedListener {
+
+    private var lastVibrationTime: Long = 0
+    private var lastMessage: String? = null
+    private val MIN_DELAY_MS = 5000L
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Se usi ViewBinding:
-        // binding = ActivityMainBinding.inflate(layoutInflater)
-        // setContentView(binding.root)
-
-        // Se non usi ViewBinding:
-        setContentView(R.layout.activity_main)
-
-        // Questa activity è principalmente un punto di ingresso,
-        // la logica principale è nel MessageListenerService.
+        Wearable.getMessageClient(this).addListener(this)
+        Log.d("WEAR", "Wearable message listener avviato")
     }
-}
 
-@Composable
-fun WearApp(greetingName: String) {
-    EyeSeeYouTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colors.background),
-            contentAlignment = Alignment.Center
-        ) {
-            TimeText()
-            Greeting(greetingName = greetingName)
+    override fun onMessageReceived(event: MessageEvent) {
+        val message = String(event.data)
+        val now = System.currentTimeMillis()
+        val vibrator = getSystemService(Vibrator::class.java)
+
+        Log.d("WEAR", "Messaggio ricevuto: $message")
+
+        if (vibrator?.hasVibrator() != true) {
+            Log.w("WEAR", "Il dispositivo non supporta la vibrazione.")
+            return
+        }
+
+        val isNewMessage = message != lastMessage
+        val isDelayRespected = now - lastVibrationTime >= MIN_DELAY_MS
+
+        if (isNewMessage || isDelayRespected) {
+            vibrateOnce(vibrator)
+            lastMessage = message
+            lastVibrationTime = now
+            Log.d("WEAR", "Vibrazione eseguita per: $message")
+        } else {
+            Log.d("WEAR", "Messaggio ignorato per debounce: $message")
         }
     }
-}
 
-@Composable
-fun Greeting(greetingName: String) {
-    Text(
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = TextAlign.Center,
-        color = MaterialTheme.colors.primary,
-        text = stringResource(R.string.hello_world, greetingName)
-    )
-}
+    private fun vibrateOnce(vibrator: Vibrator) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val effect = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+            vibrator.vibrate(effect)
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(500)
+        }
+    }
 
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
-@Composable
-fun DefaultPreview() {
-    WearApp("Preview Android")
+    override fun onDestroy() {
+        super.onDestroy()
+        Wearable.getMessageClient(this).removeListener(this)
+        Log.d("WEAR", "Wearable message listener rimosso")
+    }
 }
