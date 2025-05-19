@@ -9,6 +9,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.eyeSeeYou.helpers.DisplayRotationHelper
 import com.example.eyeSeeYou.helpers.TrackingStateHelper
+import com.example.eyeSeeYou.helpers.VoiceMessage
 import com.example.eyeSeeYou.samplerender.Framebuffer
 import com.example.eyeSeeYou.samplerender.GLError
 import com.example.eyeSeeYou.samplerender.Mesh
@@ -234,6 +235,14 @@ class MainRenderer(
         } else if (output == null) {
             activity.view.snackbarHelper.hide(activity)
         } else {
+
+            if(output == VoiceMessage.WARNING_OBSTACLE_LEFT_HUGE){
+                // Vibrazione smartwatch
+                activity.sendMessageToWearables("sx")
+            }else if(output == VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE){
+                // Vibrazione smartwatch
+                activity.sendMessageToWearables("dx")
+            }
 
             activity.vocalAssistant.playMessage(output)
             activity.vibrationManager.shortVibration()

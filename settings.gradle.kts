@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "EyeSeeYou"
 include(":app")
- 
+include(":wear")

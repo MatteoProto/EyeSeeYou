@@ -25,6 +25,7 @@ import com.example.eyeSeeYou.helpers.EisSettings
 import com.example.eyeSeeYou.helpers.FullScreenHelper
 import com.example.eyeSeeYou.helpers.VoiceMessage
 import com.example.eyeSeeYou.samplerender.SampleRender
+import com.google.android.gms.wearable.Wearable
 import com.google.ar.core.CameraConfig.TargetFps
 import com.google.ar.core.CameraConfigFilter
 import com.google.ar.core.Config
@@ -43,6 +44,10 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
+
+    private val VIBRATE_MESSAGE_PATH = "/vibrate_request"
+    private val TAG = "PhoneMainActivity"
+
     // Grid point for step detection------------------------------------------------------
     private val gridPointImageViews = mutableListOf<ImageView>()
     private val screenCoordinates = mutableMapOf<String, Point2D>()
@@ -87,7 +92,6 @@ class MainActivity : AppCompatActivity() {
     private var isARCoreManuallyPaused = false
 
 
-    @RequiresPermission(Manifest.permission.VIBRATE)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupARCore()
@@ -113,6 +117,42 @@ class MainActivity : AppCompatActivity() {
             Log.d("MainActivity", "Coordinate dei punti inviate al processor: $screenCoordinates")
         }
 
+    }
+
+    fun sendMessageToWearables(message: String) {
+        // Ottieni i nodi (smartwatch) connessi
+        Wearable.getNodeClient(this).connectedNodes.addOnCompleteListener { task ->
+            if (task.isSuccessful && task.result != null) {
+                val nodes = task.result
+                if (nodes.isEmpty()) {
+                    Log.w(TAG, "Nessun dispositivo Wear OS connesso trovato.")
+                    Toast.makeText(this, "Nessun smartwatch connesso", Toast.LENGTH_SHORT).show()
+                    return@addOnCompleteListener
+                }
+                Log.d(TAG, "Nodi trovati: ${nodes.size}")
+                val data = message.toByteArray(Charsets.UTF_8)
+                // Invia il messaggio a tutti i nodi connessi
+                nodes.forEach { node ->
+                    Wearable.getMessageClient(this).sendMessage(
+                        node.id,               // ID del nodo destinatario
+                        VIBRATE_MESSAGE_PATH,  // Path univoco del messaggio
+                        data                   // Payload (dati), null in questo caso
+                    ).apply {
+                        addOnSuccessListener {
+                            Log.d(TAG, "Messaggio inviato con successo a ${node.displayName} (${node.id})")
+                            Toast.makeText(this@MainActivity, "Richiesta vibrazione inviata", Toast.LENGTH_SHORT).show()
+                        }
+                        addOnFailureListener { e ->
+                            Log.e(TAG, "Errore invio messaggio a ${node.displayName} (${node.id}): ${e.message}")
+                            Toast.makeText(this@MainActivity, "Errore invio richiesta", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } else {
+                Log.e(TAG, "Errore nel recuperare i nodi connessi: ${task.exception}")
+                Toast.makeText(this, "Errore nel trovare lo smartwatch", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     /**
