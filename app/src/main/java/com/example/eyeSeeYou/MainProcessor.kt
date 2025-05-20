@@ -132,11 +132,6 @@ class MainProcessor {
             left && right && high && leftWall && rightWall -> VoiceMessage.WARNING_OBSTACLE_STOP
             left && right && low && leftWall && rightWall -> VoiceMessage.WARNING_OBSTACLE_STOP
 
-            almostOnStep -> VoiceMessage.WARNING_ALMOST_ON_STEP
-            stepUp -> VoiceMessage.WARNING_STEPUP
-            stepDown -> VoiceMessage.WARNING_STEPDOWN
-            pit -> VoiceMessage.WARNING_STEP_PIT
-
             left && right && center && leftWall -> VoiceMessage.WARNING_OBSTACLE_LEFT_HUGE
             left && right && high && leftWall -> VoiceMessage.WARNING_OBSTACLE_LEFT_HUGE
             left && right && low && leftWall -> VoiceMessage.WARNING_OBSTACLE_LEFT_HUGE
@@ -148,8 +143,6 @@ class MainProcessor {
             left && right && center -> VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE
             left && right && high -> VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE
             left && right && low -> VoiceMessage.WARNING_OBSTACLE_RIGHT_HUGE
-
-
 
             center && right -> VoiceMessage.WARNING_OBSTACLE_RIGHT_BIG
             high && right -> VoiceMessage.WARNING_OBSTACLE_RIGHT_BIG
@@ -164,6 +157,12 @@ class MainProcessor {
             center -> VoiceMessage.WARNING_OBSTACLE_CENTER
             right -> VoiceMessage.WARNING_OBSTACLE_RIGHT
             left -> VoiceMessage.WARNING_OBSTACLE_LEFT
+
+            almostOnStep -> VoiceMessage.WARNING_ALMOST_ON_STEP
+            stepUp -> VoiceMessage.WARNING_STEPUP
+            stepDown -> VoiceMessage.WARNING_STEPDOWN
+            pit -> VoiceMessage.WARNING_STEP_PIT
+
             high -> VoiceMessage.WARNING_OBSTACLE_HIGH
             low -> VoiceMessage.WARNING_OBSTACLE_LOW
             else -> null

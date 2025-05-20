@@ -19,6 +19,8 @@
     package="com.example.eyeSeeYou">
 
     <uses-permission android:name="android.permission.CAMERA"/>
+
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- Required to post notifications for Android T+ devices -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 

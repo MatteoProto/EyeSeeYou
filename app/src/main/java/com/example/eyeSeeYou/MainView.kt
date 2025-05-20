@@ -26,6 +26,11 @@ class MainView(val activity: MainActivity) : DefaultLifecycleObserver {
     }
 
     fun showArPausedImage(show: Boolean) {
-        arPausedImageView.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) {
+            arPausedImageView.bringToFront()
+            arPausedImageView.visibility = View.VISIBLE
+        } else {
+            arPausedImageView.visibility = View.GONE
+        }
     }
 }

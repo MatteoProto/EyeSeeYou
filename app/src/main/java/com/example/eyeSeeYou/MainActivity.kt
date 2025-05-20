@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity() {
     private var torchTimer: Handler? = null
 
     private val renderHandler = Handler(Looper.getMainLooper())
-    private val desiredFps = 20L
+    private val desiredFps = 30L
 
     private var y1 = 0f
     private var y2 = 0f
@@ -435,40 +435,41 @@ class MainActivity : AppCompatActivity() {
     private fun toggleTTS() {
         val newValue = !preferencesManager.isTTSEnabled()
         preferencesManager.setTTSEnabled(newValue)
-        vibrationManager.shortVibration(force = true)
 
         val type = if (newValue) VoiceMessage.TTS_ENABLED else VoiceMessage.TTS_DISABLED
         vocalAssistant.playMessage(type, force = true)
+        vibrationManager.longVibration()
     }
 
     @RequiresPermission(Manifest.permission.VIBRATE)
     private fun toggleWatchVibration() {
         val newValue = !preferencesManager.isWatchVibrationActive()
         preferencesManager.setWatchVibrationActive(newValue)
-        vibrationManager.longVibration()
 
         val type = if (newValue) VoiceMessage.WATCH_VIBRATION_ENABLED else VoiceMessage.WATCH_VIBRATION_DISABLED
         vocalAssistant.playMessage(type, force = true)
+        vibrationManager.longVibration()
     }
 
     @RequiresPermission(Manifest.permission.VIBRATE)
     private fun togglePhoneVibration() {
         val newValue = !preferencesManager.isPhoneVibrationEnabled()
         preferencesManager.setPhoneVibrationEnabled(newValue)
-        vibrationManager.longVibration()
 
         val type = if (newValue) VoiceMessage.VIBRATION_ENABLED else VoiceMessage.VIBRATION_DISABLED
         vocalAssistant.playMessage(type, force = true)
+        vibrationManager.longVibration()
     }
 
     @RequiresPermission(Manifest.permission.VIBRATE)
     private fun toggleARCore() {
-        vibrationManager.shortVibration(force = true)
+        vibrationManager.longVibration()
         val session = arCoreSessionHelper.session
 
         if (session == null) {
-            Log.w(TAG, "ARCore session is null, cannot toggle.")
-            vocalAssistant.playMessage(VoiceMessage.WARNING, force = true)
+            Log.w(Companion.TAG, "ARCore session is null, cannot toggle.")
+            // Potresti voler informare l'utente che ARCore non è pronto
+            vocalAssistant.playMessage(VoiceMessage.WARNING, force = true) // O un messaggio più specifico
             return
         }
 
@@ -478,10 +479,10 @@ class MainActivity : AppCompatActivity() {
                 isARCoreManuallyPaused = true
                 renderHandler.removeCallbacks(renderRunnable)
                 view.showArPausedImage(true)
-                Log.d(TAG, "ARCore session MANUALLY PAUSED via toggle.")
+                Log.d(Companion.TAG, "ARCore session MANUALLY PAUSED via toggle.")
                 vocalAssistant.playMessage(VoiceMessage.PAUSE, force = true)
             } catch (e: Exception) {
-                Log.e(TAG, "Error pausing ARCore session via toggle", e)
+                Log.e(Companion.TAG, "Error pausing ARCore session via toggle", e)
             }
         } else {
             try {
@@ -493,11 +494,11 @@ class MainActivity : AppCompatActivity() {
                 if (view.surfaceView.renderMode == GLSurfaceView.RENDERMODE_WHEN_DIRTY) {
                     renderHandler.post(renderRunnable)
                 }
-                Log.d(TAG, "ARCore session MANUALLY RESUMED via toggle.")
+                Log.d(Companion.TAG, "ARCore session MANUALLY RESUMED via toggle.")
                 vocalAssistant.playMessage(VoiceMessage.RESUME, force = true)
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error resuming ARCore session via toggle", e)
+                Log.e(Companion.TAG, "Error resuming ARCore session via toggle", e)
             }
         }
     }

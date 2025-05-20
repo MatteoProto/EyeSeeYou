@@ -53,6 +53,8 @@ class MainRenderer(
     private var showSemanticImage = false
     private var hasSetTextureNames = false
 
+    private var arSessionActive = true
+
     // Point Cloud
     private lateinit var pointCloudVertexBuffer: VertexBuffer
     private lateinit var pointCloudMesh: Mesh
@@ -70,10 +72,12 @@ class MainRenderer(
     override fun onResume(owner: LifecycleOwner) {
         displayRotationHelper.onResume()
         hasSetTextureNames = false
+        arSessionActive = true
     }
 
     override fun onPause(owner: LifecycleOwner) {
         displayRotationHelper.onPause()
+        arSessionActive = false
     }
 
     override fun onSurfaceCreated(render: SampleRender) {
@@ -164,6 +168,7 @@ class MainRenderer(
     @RequiresPermission(Manifest.permission.VIBRATE)
     override fun onDrawFrame(render: SampleRender) {
         val session = session ?: return
+        if (session == null || !arSessionActive) return
         this.render = render
         val frame =
             try {

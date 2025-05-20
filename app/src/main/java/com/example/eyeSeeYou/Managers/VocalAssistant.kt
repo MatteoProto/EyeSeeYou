@@ -12,7 +12,6 @@ class VocalAssistant(private val context: Context, private val preferencesManage
     private var tts: TextToSpeech? = null
     private var isReady = false
 
-    private var lastMessage: String? = null
     private var lastMessageTime: Long = 0
     private val MIN_DELAY_MS = 3000L
 
@@ -57,7 +56,6 @@ class VocalAssistant(private val context: Context, private val preferencesManage
             }
 
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
-            lastMessage = text
             lastMessageTime = now
             Log.d("VocalAssistant", "Talked: $text with language $locale")
         } else if (!isReady) {

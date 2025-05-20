@@ -33,7 +33,7 @@ class ObjectDetector {
             9 -> SemanticLabel.VEHICLE
             10 -> SemanticLabel.PERSON
             11 -> SemanticLabel.WATER
-            12 -> SemanticLabel.UNLABELED
+            0 -> SemanticLabel.UNLABELED
             else -> SemanticLabel.SKY
         }
     }
@@ -41,7 +41,7 @@ class ObjectDetector {
     private fun assignLabeledPoints(
         semanticImage: Image,
         depthImage: Image,
-        maxDistanceMeters: Float = 3.5f
+        maxDistanceMeters: Float = 3.0f
     ): Map<SemanticLabel, MutableList<MainProcessor.PointData>> {
         val labeledPoints = mutableMapOf<SemanticLabel, MutableList<MainProcessor.PointData>>()
 
