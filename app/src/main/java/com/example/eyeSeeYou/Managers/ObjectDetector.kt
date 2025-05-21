@@ -23,7 +23,7 @@ class ObjectDetector {
         return when (byte.toInt()) {
             1 -> SemanticLabel.SKY
             /** We advice to disable building for indoor usage*/
-            2 -> SemanticLabel.BUILDING
+            //2 -> SemanticLabel.BUILDING
             3 -> SemanticLabel.TREE
             4 -> SemanticLabel.ROAD
             5 -> SemanticLabel.SIDEWALK
@@ -64,7 +64,7 @@ class ObjectDetector {
                     val semanticIndex = semanticY * semanticWidth + semanticX
 
                     val label = findLabel(semanticBytes[semanticIndex])
-                    if (label == SemanticLabel.SKY || label == SemanticLabel.ROAD || label == SemanticLabel.SIDEWALK || label == SemanticLabel.TERRAIN || label == SemanticLabel.WATER) continue
+                    if (label == SemanticLabel.SKY || label == SemanticLabel.ROAD || label == SemanticLabel.SIDEWALK || label == SemanticLabel.TERRAIN || label == SemanticLabel.WATER || label == SemanticLabel.UNLABELED) continue
 
                     val depthRaw = depthBuffer.get(index).toInt() and 0xFFFF
                     val depthMeters = depthRaw / 1000.0f
@@ -123,7 +123,7 @@ class ObjectDetector {
         val zoneMap = mutableMapOf<SemanticLabel, Set<Zones>>()
         val c = height / 2
 
-        val low = width * 11 / 16
+        val low = width * 12 / 16
         val medium = width * 1 / 4
         val high = width * 1 / 8
 

@@ -13,7 +13,7 @@ class VibrationManager(private val context: Context, private val preferencesMana
 
     private val vibrator: Vibrator? = context.getSystemService(Vibrator::class.java)
     private var lastMessageTime: Long = 0
-    private val MIN_DELAY_MS = 3000L
+    private val MIN_DELAY_MS = 2500L
 
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun shortVibration(force: Boolean = false) {

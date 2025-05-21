@@ -16,14 +16,14 @@ import com.google.ar.core.exceptions.NotYetAvailableException
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-private const val MIN_EXPECTED_STEP_RISE = 0.0f        // Minima alzata/discesa attesa (0cm)
+private const val MIN_EXPECTED_STEP_RISE = 0.18f        // Minima alzata/discesa attesa (0cm)
 private const val MAX_EXPECTED_STEP_RISE = 0.30f       // Massima alzata/discesa attesa (30cm)
-private const val MIN_EXPECTED_STEP_ADVANCE_XZ = 0.00f // Minimo avanzamento nel piano XZ (0cm)
+private const val MIN_EXPECTED_STEP_ADVANCE_XZ = 0.10f // Minimo avanzamento nel piano XZ (0cm)
 private const val MAX_EXPECTED_STEP_ADVANCE_XZ = 0.45f // Massimo avanzamento nel piano XZ (45cm)
 private const val MAX_ALLOWED_LATERAL_OFFSET = 0.30f   // Massima deviazione laterale permessa (30cm)
-private const val MIN_HEIGHT_DIFFERENCE = 0.15f        // Minima differenza di altezza per uno scalino
+private const val MIN_HEIGHT_DIFFERENCE = 0.22f        // Minima differenza di altezza per uno scalino
 private const val MAX_HEIGHT_DIFFERENCE = 0.35f        // Massima differenza di altezza per uno scalino
-private const val MAX_DEPTH_DIFFERENCE = 0.30f         // Massima differenza di prodondità per uno scalino
+private const val MAX_DEPTH_DIFFERENCE = 0.50f         // Massima differenza di prodondità per uno scalino
 
 class MainProcessor {
 
@@ -469,7 +469,7 @@ class MainProcessor {
             val dz = currentPose.tz() - last.tz()
 
             val distanceMoved = sqrt(dx * dx + dy * dy + dz * dz)
-            return distanceMoved > 0.2f  // 20 cm soglia di movimento
+            return distanceMoved > 0.4f  // 20 cm soglia di movimento
         }
         return true  // Se non c'è un valore precedente, supponi che si sia mosso
     }

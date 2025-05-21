@@ -300,7 +300,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyCameraConfigFilter(session: Session) {
             val filter = CameraConfigFilter(session)
-            filter.targetFps = EnumSet.of(TargetFps.TARGET_FPS_30)
+            filter.targetFps = EnumSet.of(TargetFps.TARGET_FPS_60)
             val cameraConfigList = session.getSupportedCameraConfigs(filter)
 
             if (cameraConfigList.isNotEmpty()) {
