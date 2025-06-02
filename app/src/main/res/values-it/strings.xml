@@ -60,7 +60,7 @@
         </string-array>
 
         <string-array name="vibration_commands">
-            <item>attiva vibrazione telefono</item>
+            <item>vibrazione</item>
         </string-array>
 
         <string-array name="disable_vibration_commands">

@@ -7,7 +7,8 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import com.example.eyeSeeYou.Managers.VocalAssistant
+import com.example.eyeSeeYou.managers.ArCoreManager
+import com.example.eyeSeeYou.managers.WearableManager
 import com.example.eyeSeeYou.helpers.DisplayRotationHelper
 import com.example.eyeSeeYou.helpers.TrackingStateHelper
 import com.example.eyeSeeYou.samplerender.Framebuffer
@@ -33,8 +34,9 @@ import java.nio.ByteBuffer
 /** Renders the HelloAR application using google example Renderer. */
 class MainRenderer(
     val activity: MainActivity,
-    private val processor: MainProcessor,
-    vocalAssistant: VocalAssistant,
+    val processor: MainProcessor,
+    val wearableManager: WearableManager,
+    val arCoreManager: ArCoreManager,
 ) :
     SampleRender.Renderer, DefaultLifecycleObserver {
     companion object {
@@ -52,7 +54,6 @@ class MainRenderer(
     private var activeCamera = true
     private var showSemanticImage = false
     private var hasSetTextureNames = false
-
     private var arSessionActive = true
 
     // Point Cloud
@@ -167,6 +168,7 @@ class MainRenderer(
     /** Group of functions executed for each frame. */
     @RequiresPermission(Manifest.permission.VIBRATE)
     override fun onDrawFrame(render: SampleRender) {
+        Log.e("1", "777")
         val session = session ?: return
         if (session == null || !arSessionActive) return
         this.render = render
@@ -231,12 +233,12 @@ class MainRenderer(
             activity.view.snackbarHelper.hide(activity)
         } else if (camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_LIGHT || camera.trackingFailureReason == TrackingFailureReason.INSUFFICIENT_FEATURES) {
             activity.view.snackbarHelper.showMessage(activity, message)
-            activity.setTorch(true, session)
+            arCoreManager.setTorch(true, session)
         } else if (output == null) {
             activity.view.snackbarHelper.hide(activity)
         } else {
             activity.vocalAssistant.playMessage(output)
-            output.wearableCommand?.let { command -> activity.sendMessageToWearables(command.name.lowercase()) }
+            output.wearableCommand?.let { command -> wearableManager.sendMessageToWearables(command.name.lowercase()) }
             activity.vibrationManager.shortVibration()
             activity.view.snackbarHelper.showMessage(activity, output.toString())
         }

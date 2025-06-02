@@ -1,8 +1,8 @@
-package com.example.eyeSeeYou.Managers
+package com.example.eyeSeeYou.managers
 
 import android.media.Image
 import com.example.eyeSeeYou.MainProcessor
-import com.example.eyeSeeYou.helpers.Zones
+import com.example.eyeSeeYou.enums.Zones
 import com.google.ar.core.SemanticLabel
 import java.nio.ByteOrder
 import kotlin.collections.iterator

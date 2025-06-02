@@ -1,4 +1,4 @@
-package com.example.eyeSeeYou.helpers
+package com.example.eyeSeeYou.enums
 
 enum class Zones {
     LOW,
